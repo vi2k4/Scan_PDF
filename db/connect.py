@@ -22,29 +22,27 @@ def close_connection(connection):
         print("Đã đóng kết nối.")
 
 def fetch_data():
+    cursor = None
     connection = create_connection()
-    data_list = []  # Tạo danh sách để lưu dữ liệu
+    data_list = []  # Khởi tạo trước
 
     if connection:
         try:
-            cursor = connection.cursor()  # Không dùng dictionary=True
+            cursor = connection.cursor()
             cursor.execute("SELECT * FROM users")
-            results = cursor.fetchall()
-            
-            # Lưu dữ liệu vào danh sách (chỉ lấy giá trị, không lấy tên cột)
-            data_list = [list(row) for row in results]
+            data_list = cursor.fetchall()
 
         except Error as e:
             print(f"Lỗi truy vấn: {e}")
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
             connection.close()
             print("Đã đóng kết nối.")
 
     return data_list
 
-# Gọi hàm và kiểm tra kết quả
-users_data = fetch_data()
-for user in users_data:
-    print(user)  # Chỉ hiển thị danh sách các giá trị
-
+# Gọi hàm để tránh cảnh báo của Pylance
+if __name__ == "__main__":
+    users = fetch_data()
+    print(users)
