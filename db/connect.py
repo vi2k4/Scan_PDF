@@ -42,3 +42,28 @@ def fetch_data():
             print("Đã đóng kết nối.")
 
     return data_list
+
+
+def registedUser(user):
+    connection = create_connection()
+    if not connection:
+        print("Không thể kết nối database.")
+    try:
+        cursor = connection.cursor()
+        sql = """INSERT INTO users (username, password_hash, email, created_at)
+         VALUES (%s, %s, %s, NOW())"""
+
+        values = (user["username"], user["password_hash"], user["email"])
+
+        cursor.execute(sql, values)
+        connection.commit()
+        print("Đăng ký thành công!")
+        return True
+
+    except Error as e:
+        print(f"Lỗi truy vấn: {e}")
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("Đã đóng kết nối.")

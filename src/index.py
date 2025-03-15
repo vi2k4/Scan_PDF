@@ -3,8 +3,11 @@ import os
 
 # Thêm thư mục gốc (PYTHON) vào sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from db.connect import fetch_data  
+from db.connect import fetch_data , registedUser
+print(sys.path)
+# from db.userController import fetch_data
 
 
 from email.mime.multipart import MIMEMultipart
@@ -16,8 +19,6 @@ from PyQt6.QtWidgets import QMessageBox
 import subprocess
 import smtplib
 from email_validator import validate_email, EmailNotValidError
-
-from db.connect import fetch_data
 
 
 
@@ -110,19 +111,26 @@ class ForgotPasswordDialog(QtWidgets.QDialog):
         except Exception as e:
             print(f"Lỗi gửi email: {e}")
             return False
+        
+
 
 
 class SignInDialog(QtWidgets.QDialog):
-   
     def __init__(self):
         super().__init__()
+        self.user_info = {
+            "username": "",
+            "password_hash": "",
+            "email": "",
+            "role": "",
+            "is_active": None
+        }
 
         self.setWindowTitle("Đăng ký tài khoản")
         self.setGeometry(500, 250, 400, 300)
-        center_window(self)  # Căn giữa cửa sổ
 
-        main_layout = QtWidgets.QHBoxLayout()  # Tạo layout chính để căn giữa
-        container = QtWidgets.QVBoxLayout()  # Layout chứa nội dung
+        main_layout = QtWidgets.QHBoxLayout()
+        container = QtWidgets.QVBoxLayout()
 
         container.addWidget(QtWidgets.QLabel("Nhập thông tin đăng ký:", alignment=QtCore.Qt.AlignmentFlag.AlignCenter))
 
@@ -141,7 +149,9 @@ class SignInDialog(QtWidgets.QDialog):
 
         container.addLayout(form_layout)
         self.submit_btn = QtWidgets.QPushButton("Đăng ký")
-        self.submit_btn.setFixedWidth(400)  # Đặt kích thước nút
+        self.submit_btn.setFixedWidth(400)
+
+        self.submit_btn.clicked.connect(self.addUser)
         btn_layout = QtWidgets.QHBoxLayout()
         btn_layout.addStretch()
         btn_layout.addWidget(self.submit_btn)
@@ -152,44 +162,60 @@ class SignInDialog(QtWidgets.QDialog):
         main_layout.addLayout(container)
         main_layout.addStretch()
 
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #f5f5f5;
-                border-radius: 40px;
-            }
-            QLabel {
-                font-size: 14px;
-                font-weight: bold;
-                color: #333;
-            }
-            QLineEdit {
-                font-size: 14px;
-                padding: 5px;
-                border: 1px solid #ccc;
-                border-radius: 5px;
-                background-color: white;
-            }
-            QLineEdit:focus {
-                border: 1px solid #0078d7;
-                background-color: #e6f2ff;
-            }
-            QPushButton {
-                font-size: 14px;
-                background-color: #0078d7;
-                color: white;
-                border-radius: 5px;
-                padding: 8px;
-            }
-            QPushButton:hover {
-                background-color: #005cbf;
-            }
-        """)
-
         self.setLayout(main_layout)
-    
-    
 
+    def check_input(self):
+        fields = {
+            "Tên người dùng": self.username_input.text().strip(),
+            "Email": self.email_input.text().strip(),
+            "Mật khẩu": self.password_input.text().strip(),
+            "Nhập lại mật khẩu": self.re_password_input.text().strip(),
+        }
 
+        # Kiểm tra xem có trường nào trống không
+        for field_name, value in fields.items():
+            if not value:
+                QtWidgets.QMessageBox.warning(self, "Lỗi", f"{field_name} không được để trống!")
+                return False
+
+        email = fields["Email"]
+        def is_valid_email(email):
+            try:
+                validate_email(email, check_deliverability=False)  # Chỉ kiểm tra cú pháp email
+                return True
+            except EmailNotValidError:
+                return False
+
+        if not is_valid_email(email):
+            QtWidgets.QMessageBox.warning(None, "Lỗi", "Email không hợp lệ hoặc không tồn tại!")
+            return False
+        
+        password = fields["Mật khẩu"]
+        re_password = fields["Nhập lại mật khẩu"]
+
+        if len(password) < 6:
+            QtWidgets.QMessageBox.warning(self, "Lỗi", "Mật khẩu phải có ít nhất 6 ký tự!")
+            return False
+
+        if password != re_password:
+            QtWidgets.QMessageBox.warning(self, "Lỗi", "Mật khẩu nhập lại không khớp!")
+            return False
+
+        return True
+
+   
+    def addUser(self):
+        if not self.check_input():
+            return  
+
+        self.user_info["email"] = self.email_input.text().strip()
+        self.user_info["username"] = self.username_input.text().strip()
+        self.user_info["password_hash"] = self.password_input.text()  # Cần hash mật khẩu
+
+        print("Đăng ký thành công!")
+
+        registedUser(self.user_info)
+        self.accept()
 
 
 class Ui_MainWindow(object):
