@@ -21,6 +21,7 @@ def close_connection(connection):
         connection.close()
         print("Đã đóng kết nối.")
 
+
 def fetch_data():
     cursor = None
     connection = create_connection()
@@ -41,8 +42,3 @@ def fetch_data():
             print("Đã đóng kết nối.")
 
     return data_list
-
-# Gọi hàm để tránh cảnh báo của Pylance
-if __name__ == "__main__":
-    users = fetch_data()
-    print(users)

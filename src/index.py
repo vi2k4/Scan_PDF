@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Thêm thư mục gốc (PYTHON) vào sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from db.connect import fetch_data  
+
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -8,10 +16,6 @@ from PyQt6.QtWidgets import QMessageBox
 import subprocess
 import smtplib
 from email_validator import validate_email, EmailNotValidError
-import os
-import sys
-# Thêm thư mục cha của 'db' vào sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from db.connect import fetch_data
 
@@ -30,7 +34,7 @@ class ForgotPasswordDialog(QtWidgets.QDialog):
         self.setWindowTitle("Quên mật khẩu")
         self.setGeometry(700, 400, 300, 200)
         center_window(self)
-        self.otp_code = None  # Lưu mã OTP
+        self.otp_code = None
 
         layout = QtWidgets.QVBoxLayout()
         label = QtWidgets.QLabel("Nhập email để lấy lại mật khẩu:")
@@ -188,12 +192,6 @@ class SignInDialog(QtWidgets.QDialog):
 
 
 
-def listUser():
-        list = fetch_data()
-        return list
-
-
-
 class Ui_MainWindow(object):
     
     def setupUi(self, MainWindow):
@@ -319,7 +317,7 @@ class Ui_MainWindow(object):
 
     def checkAccout(self):
         try:
-            print("Hàm checkAccout được gọi!")  # Kiểm tra xem hàm có chạy không
+            print("Hàm checkAccout được gọi!") 
             email = self.login_email.text().strip()
             password = self.password.text().strip()
 
@@ -327,21 +325,20 @@ class Ui_MainWindow(object):
                 self.show_message("Lỗi", "Vui lòng nhập email và mật khẩu!")
                 return
 
-
-            # try:
-            #     list = listUser()
-            #     print("Dữ liệu lấy từ DB:", list)
-            # except Exception as e:
-            #     print(f"Lỗi khi truy vấn dữ liệu: {e}")
-            #     self.show_message("Lỗi", f"Lỗi khi truy vấn dữ liệu: {e}")
-            #     return  # Dừng lại nếu có lỗi
-
-            list = [("1", "2","test", "1", "1")]
+            try:
+                list = fetch_data()
+                if list is None:
+                    raise Exception("Không lấy được dữ liệu từ database!")
+                print("Dữ liệu lấy từ DB:", list)
+            except Exception as e:
+                print(f"Lỗi khi truy vấn dữ liệu: {e}")
+                self.show_message("Lỗi", f"Lỗi khi truy vấn dữ liệu: {e}")
+                return 
 
             found = False
             for user in list:
                 stored_email = user[3]  
-                stored_password = user[4] 
+                stored_password = user[2] 
 
                 if stored_email == email and stored_password == password:
                     found = True
@@ -350,17 +347,16 @@ class Ui_MainWindow(object):
             if found:
                 self.show_message("Thành công", "Đăng nhập thành công!")
                 
-                subprocess.Popen(["python", "src/menu.py"])  # Mở file scan.py
-                
-                QtWidgets.QApplication.quit()  # Thoát chương trình đăng nhập
+                # Dùng sys.executable để đảm bảo chạy đúng Python
+                subprocess.Popen([sys.executable, "src/menu.py"])
 
+                QtWidgets.QApplication.quit() 
             else:
                 self.show_message("Lỗi", "Email hoặc mật khẩu không chính xác!")
 
         except Exception as e:
             print(f"Lỗi xảy ra: {e}") 
-            self.show_message("Lỗi", f"Có lỗi xảy ra: {e}")  
-
+            self.show_message("Lỗi", f"Có lỗi xảy ra: {e}")
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate

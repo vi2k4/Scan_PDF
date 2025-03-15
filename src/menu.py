@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import Menu
 import scan 
+import subprocess
 
 root = tk.Tk()
 root.title("Custom UI")
@@ -32,13 +33,18 @@ menu_button.pack(side=tk.RIGHT, padx=10, pady=5)
 def change_module_name(name):
     module_text.set(name)  
 
+def backToLogin():
+    root.destroy()
+    subprocess.Popen(["python", "src/index.py"])  # Mở file scan.py
+
+
 # Main Menu
 menu = Menu(root, tearoff=0)
 menu.add_command(label="Scan", command=lambda: [change_module_name("SCAN"), scan.load_scan(root, top_frame)])
 menu.add_command(label="Ảnh gần đây", command=lambda: change_module_name("ẢNH GẦN ĐÂY"))
 menu.add_command(label="File", command=lambda: change_module_name("FILE"))
 menu.add_command(label="Cài đặt", command=lambda: change_module_name("CÀI ĐẶT"))
-menu.add_command(label="Đăng xuất")
+menu.add_command(label="Đăng xuất" , command=lambda: backToLogin())
 
 # Bind menu button
 def show_menu(event=None):
