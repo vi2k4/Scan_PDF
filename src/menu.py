@@ -6,6 +6,8 @@ import setting
 
 import user_data
 
+
+print("Menu này : ")
 print(user_data.current_user_id)
 
 root = tk.Tk()
