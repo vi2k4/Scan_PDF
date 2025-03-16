@@ -9,6 +9,12 @@ from PIL import Image, ImageTk
 import os
 import sys
 
+
+if len(sys.argv) > 1:
+    user_id = int (sys.argv[1])
+else:
+    user_id = None
+
 # Kết nối MySQL
 def connect_db():
     try:

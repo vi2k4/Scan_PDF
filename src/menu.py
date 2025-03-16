@@ -63,7 +63,7 @@ menu.add_command(label="File", command=lambda: change_module_name("FILE"))
 if(user_id == "1"):
     menu.add_command(label="Quản lý tài khoản", command=lambda: [change_module_name("QUẢN LÝ TÀI KHOẢN"), user_controller.load_user_management(root, top_frame)])
 # menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame)])
-menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame, user_data.current_user_id)])
+menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame, user_id)])
 menu.add_command(label="Đăng xuất" , command=lambda: backToLogin())
 
 # Bind menu button
