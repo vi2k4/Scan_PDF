@@ -9,7 +9,8 @@ import user_data
 
 print("Menu này : ")
 print(user_data.current_user_id)
-
+print(f"user_id từ menu: {user_data.current_user_id}")
+print(f"DEBUG: user_data.current_user_id = {user_data.current_user_id}, type = {type(user_data.current_user_id)}")
 root = tk.Tk()
 root.title("Custom UI")
 
@@ -43,14 +44,14 @@ def change_module_name(name):
 def backToLogin():
     root.destroy()
     subprocess.Popen(["python", "src/index.py"])  # Mở file scan.py
-
+   
 
 # Main Menu
 menu = Menu(root, tearoff=0)
 menu.add_command(label="Scan", command=lambda: [change_module_name("SCAN"), scan.load_scan(root, top_frame)])
 menu.add_command(label="Ảnh gần đây", command=lambda: change_module_name("ẢNH GẦN ĐÂY"))
 menu.add_command(label="File", command=lambda: change_module_name("FILE"))
-menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame)])
+menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame, user_data.current_user_id)])
 menu.add_command(label="Đăng xuất" , command=lambda: backToLogin())
 
 # Bind menu button
