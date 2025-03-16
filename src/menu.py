@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import Menu
 import scan 
 import subprocess
+import setting
 
 import user_data
 
@@ -47,7 +48,7 @@ menu = Menu(root, tearoff=0)
 menu.add_command(label="Scan", command=lambda: [change_module_name("SCAN"), scan.load_scan(root, top_frame)])
 menu.add_command(label="Ảnh gần đây", command=lambda: change_module_name("ẢNH GẦN ĐÂY"))
 menu.add_command(label="File", command=lambda: change_module_name("FILE"))
-menu.add_command(label="Cài đặt", command=lambda: change_module_name("CÀI ĐẶT"))
+menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame)])
 menu.add_command(label="Đăng xuất" , command=lambda: backToLogin())
 
 # Bind menu button
