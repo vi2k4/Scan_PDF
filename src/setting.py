@@ -1,9 +1,36 @@
+import hashlib
 import tkinter as tk
 from tkinter import messagebox
+from mysql.connector import Error
+
+
+import mysql
 from PIL import Image, ImageTk
 import os
 import sys
 
+
+if len(sys.argv) > 1:
+    user_id = int (sys.argv[1])
+else:
+    user_id = None
+
+# Kết nối MySQL
+def connect_db():
+    try:
+        return mysql.connector.connect(
+            host="localhost",
+            user="root",  # Thay bằng user của bạn
+            password="",  # Thay bằng password của bạn
+            database="my_scanner_db"
+        )
+    except Error as e:
+        print(f"Lỗi kết nối MySQL: {e}")
+        return None
+
+# Hàm băm mật khẩu
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 # Thêm thư mục gốc (PYTHON) vào sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from db.connect import create_connection  # Import từ file connect.py

@@ -7,7 +7,7 @@ def create_connection():
             host='localhost',
             database='my_scanner_db',
             user='root',
-            password='anhtuan123'
+            password=''
         )
         if connection.is_connected():
             print("Kết nối thành công!")
@@ -90,3 +90,4 @@ def check_email_exists(email):
             cursor.close()
             connection.close()
             print("Đã đóng kết nối.")
+

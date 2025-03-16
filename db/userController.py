@@ -29,3 +29,4 @@ def fetch_data():
     return data_list
 
 print(fetch_data())
+
