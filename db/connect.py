@@ -67,3 +67,26 @@ def registedUser(user):
             cursor.close()
             connection.close()
             print("Đã đóng kết nối.")
+
+
+def check_email_exists(email):
+    connection = create_connection()
+    if not connection:
+        print("Không thể kết nối database.")
+        return False 
+
+    try:
+        cursor = connection.cursor()
+        sql = "SELECT COUNT(*) FROM users WHERE email = %s"
+        cursor.execute(sql, (email,))
+        count = cursor.fetchone()[0]
+        return count > 0  # Trả về True nếu email tồn tại, ngược lại False
+
+    except Error as e:
+        print(f"Lỗi truy vấn: {e}")
+        return False
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("Đã đóng kết nối.")

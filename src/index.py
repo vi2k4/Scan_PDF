@@ -5,7 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from db.connect import fetch_data , registedUser
+from db.connect import fetch_data , registedUser, check_email_exists
 print(sys.path)
 # from db.userController import fetch_data
 
@@ -21,8 +21,11 @@ import smtplib
 from email_validator import validate_email, EmailNotValidError
 import user_data
 
+
+
 def set_current_user(user_id):
     user_data.current_user_id = user_id
+
 
 def center_window(self):
         screen = QtWidgets.QApplication.primaryScreen().geometry()
@@ -30,6 +33,16 @@ def center_window(self):
             (screen.width() - self.width()) // 2,
             (screen.height() - self.height()) // 2
         )
+
+
+def show_message(title, message):
+        msg = QMessageBox()
+        msg.setWindowTitle(title)
+        msg.setText(message)
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.exec()
+
+
 class ForgotPasswordDialog(QtWidgets.QDialog):
     
     def __init__(self):
@@ -199,6 +212,11 @@ class SignInDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(None, "Lỗi", "Email không hợp lệ hoặc không tồn tại!")
             return False
         
+
+        if check_email_exists(email):
+            QtWidgets.QMessageBox.warning(self, "Lỗi", "Email này đã được sử dụng!")
+            return False
+
         password = fields["Mật khẩu"]
         re_password = fields["Nhập lại mật khẩu"]
 
@@ -222,9 +240,13 @@ class SignInDialog(QtWidgets.QDialog):
         self.user_info["password_hash"] = self.password_input.text()  # Cần hash mật khẩu
 
         print("Đăng ký thành công!")
-
+        show_message("Thành công", "Đăng kí thành công!")
         registedUser(self.user_info)
         self.accept()
+
+
+
+
 
 
 class Ui_MainWindow(object):
@@ -340,13 +362,7 @@ class Ui_MainWindow(object):
 
 
 
-    def show_message(self, title, message):
-        msg = QMessageBox()
-        msg.setWindowTitle(title)
-        msg.setText(message)
-        msg.setIcon(QMessageBox.Icon.Warning)
-        msg.exec()
-
+    
 
 
 
@@ -357,7 +373,7 @@ class Ui_MainWindow(object):
             password = self.password.text().strip()
 
             if not email or not password: 
-                self.show_message("Lỗi", "Vui lòng nhập email và mật khẩu!")
+                show_message("Lỗi", "Vui lòng nhập email và mật khẩu!")
                 return
 
             try:
@@ -367,7 +383,7 @@ class Ui_MainWindow(object):
                 print("Dữ liệu lấy từ DB:", list)
             except Exception as e:
                 print(f"Lỗi khi truy vấn dữ liệu: {e}")
-                self.show_message("Lỗi", f"Lỗi khi truy vấn dữ liệu: {e}")
+                show_message("Lỗi", f"Lỗi khi truy vấn dữ liệu: {e}")
                 return 
 
             found = False
@@ -382,18 +398,18 @@ class Ui_MainWindow(object):
                     break  
             
             if found:
-                self.show_message("Thành công", "Đăng nhập thành công!")
+                show_message("Thành công", "Đăng nhập thành công!")
                 
                 # Dùng sys.executable để đảm bảo chạy đúng Python
                 subprocess.Popen([sys.executable, "src/menu.py"])
 
                 QtWidgets.QApplication.quit() 
             else:
-                self.show_message("Lỗi", "Email hoặc mật khẩu không chính xác!")
+                show_message("Lỗi", "Email hoặc mật khẩu không chính xác!")
 
         except Exception as e:
             print(f"Lỗi xảy ra: {e}") 
-            self.show_message("Lỗi", f"Có lỗi xảy ra: {e}")
+            show_message("Lỗi", f"Có lỗi xảy ra: {e}")
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
