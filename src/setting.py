@@ -12,7 +12,7 @@ def connect_db():
         return mysql.connector.connect(
             host="localhost",
             user="root",  # Thay bằng user của bạn
-            password="anhtuan123",  # Thay bằng password của bạn
+            password="",  # Thay bằng password của bạn
             database="my_scanner_db"
         )
     except Error as e:

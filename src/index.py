@@ -393,17 +393,20 @@ class Ui_MainWindow(object):
 
                 if stored_email == email and stored_password == password:
                     found = True
-                    print(user[0])
+
+                    user_data.current_user_id = user[0]
+                    print(user_data.current_user_id)
                     set_current_user(user[0])  # Lưu ID
                     break  
             
             if found:
                 show_message("Thành công", "Đăng nhập thành công!")
-                
-                # Dùng sys.executable để đảm bảo chạy đúng Python
-                subprocess.Popen([sys.executable, "src/menu.py"])
 
-                QtWidgets.QApplication.quit() 
+                # Dùng sys.executable để đảm bảo chạy đúng Python
+                subprocess.Popen([sys.executable, "menu.py"])
+
+                MainWindow.hide()
+                # QtWidgets.QApplication.quit()
             else:
                 show_message("Lỗi", "Email hoặc mật khẩu không chính xác!")
 

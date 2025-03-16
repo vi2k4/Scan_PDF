@@ -90,3 +90,4 @@ def check_email_exists(email):
             cursor.close()
             connection.close()
             print("Đã đóng kết nối.")
+
