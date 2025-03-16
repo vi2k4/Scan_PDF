@@ -1,10 +1,14 @@
+import hashlib
 import tkinter as tk
 from tkinter import messagebox
+from mysql.connector import Error
+
+
+import mysql
 from PIL import Image, ImageTk
 import os
 import sys
 
-<<<<<<< HEAD
 # Kết nối MySQL
 def connect_db():
     try:
@@ -21,11 +25,9 @@ def connect_db():
 # Hàm băm mật khẩu
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
-=======
 # Thêm thư mục gốc (PYTHON) vào sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from db.connect import create_connection  # Import từ file connect.py
->>>>>>> 03a7e3b43494ab16ca94f6504a58aa1603b81b81
 
 # Căn giữa cửa sổ
 def center_window(win, width=400, height=300):

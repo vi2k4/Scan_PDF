@@ -1,6 +1,8 @@
 import sys
 import os
 
+from src import user_data
+
 # Thêm thư mục gốc (PYTHON) vào sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -21,6 +23,12 @@ import smtplib
 from email_validator import validate_email, EmailNotValidError
 
 
+def show_message(title, message):
+    msg = QMessageBox()
+    msg.setWindowTitle(title)
+    msg.setText(message)
+    msg.setIcon(QMessageBox.Icon.Warning)
+    msg.exec()
 
 def center_window(self):
         screen = QtWidgets.QApplication.primaryScreen().geometry()
@@ -218,6 +226,10 @@ class SignInDialog(QtWidgets.QDialog):
         self.accept()
 
 
+def set_current_user(userId):
+    user_data.current_user_id = userId
+
+
 class Ui_MainWindow(object):
     
     def setupUi(self, MainWindow):
@@ -359,39 +371,27 @@ class Ui_MainWindow(object):
             except Exception as e:
                 print(f"Lỗi khi truy vấn dữ liệu: {e}")
                 self.show_message("Lỗi", f"Lỗi khi truy vấn dữ liệu: {e}")
-                return 
+                return
 
             found = False
             for user in list:
-                stored_email = user[3]  
-                stored_password = user[2] 
-
+                stored_email = user[3]
+                stored_password = user[2]
                 if stored_email == email and stored_password == password:
                     found = True
-<<<<<<< HEAD
-
                     user_data.current_user_id = user[0]
+                    user_data.login(user[0])
+                    set_current_user(user[0])
                     print(user_data.current_user_id)
-                    set_current_user(user[0])  # Lưu ID
-                    break  
-            
-            if found:
-                show_message("Thành công", "Đăng nhập thành công!")
-=======
-                    break  
-            
+                    break  # Thoát khỏi vòng lặp (đã tìm thấy user)
+
+            # Xử lý sau khi vòng lặp kết thúc
             if found:
                 self.show_message("Thành công", "Đăng nhập thành công!")
-                
-                # Dùng sys.executable để đảm bảo chạy đúng Python
-                subprocess.Popen([sys.executable, "src/menu.py"])
->>>>>>> 03a7e3b43494ab16ca94f6504a58aa1603b81b81
-
-                # Dùng sys.executable để đảm bảo chạy đúng Python
+                # Mở menu.py
                 subprocess.Popen([sys.executable, "menu.py"])
-
+                # Ẩn cửa sổ chính
                 MainWindow.hide()
-                # QtWidgets.QApplication.quit()
             else:
                 self.show_message("Lỗi", "Email hoặc mật khẩu không chính xác!")
 
