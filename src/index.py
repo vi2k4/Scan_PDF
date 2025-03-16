@@ -226,8 +226,8 @@ class SignInDialog(QtWidgets.QDialog):
         self.accept()
 
 
-def set_current_user(userId):
-    user_data.current_user_id = userId
+# def set_current_user(userId):
+#     user_data.current_user_id = userId
 
 
 class Ui_MainWindow(object):
@@ -379,9 +379,7 @@ class Ui_MainWindow(object):
                 stored_password = user[2]
                 if stored_email == email and stored_password == password:
                     found = True
-                    user_data.current_user_id = user[0]
-                    user_data.login(user[0])
-                    set_current_user(user[0])
+                    user_data.set_current_user(user[0])
                     print(user_data.current_user_id)
                     break  # Thoát khỏi vòng lặp (đã tìm thấy user)
 
@@ -389,7 +387,7 @@ class Ui_MainWindow(object):
             if found:
                 self.show_message("Thành công", "Đăng nhập thành công!")
                 # Mở menu.py
-                subprocess.Popen([sys.executable, "menu.py"])
+                subprocess.Popen([sys.executable, "menu.py", str(user_data.get_current_user())])
                 # Ẩn cửa sổ chính
                 MainWindow.hide()
             else:

@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 from tkinter import Menu
 import scan 
@@ -7,13 +8,16 @@ import user_controller
 
 import user_data
 
-
-print(user_data.current_user_id)
-
-print("Menu này : ")
-print(user_data.current_user_id)
-print(f"user_id từ menu: {user_data.current_user_id}")
-print(f"DEBUG: user_data.current_user_id = {user_data.current_user_id}, type = {type(user_data.current_user_id)}")
+if len(sys.argv) > 1:
+    user_id = sys.argv[1]
+else:
+    user_id = None
+# print(user_data.get_current_user())
+#
+# print("Menu này : ")
+# print(user_data.current_user_id)
+# print(f"user_id từ menu: {user_data.current_user_id}")
+# print(f"DEBUG: user_data.current_user_id = {user_data.current_user_id}, type = {type(user_data.current_user_id)}")
 root = tk.Tk()
 root.title("Custom UI")
 
@@ -56,7 +60,7 @@ menu = Menu(root, tearoff=0)
 menu.add_command(label="Scan", command=lambda: [change_module_name("SCAN"), scan.load_scan(root, top_frame)])
 menu.add_command(label="Ảnh gần đây", command=lambda: change_module_name("ẢNH GẦN ĐÂY"))
 menu.add_command(label="File", command=lambda: change_module_name("FILE"))
-if(user_data.current_user_id == 1):
+if(user_id == "1"):
     menu.add_command(label="Quản lý tài khoản", command=lambda: [change_module_name("QUẢN LÝ TÀI KHOẢN"), user_controller.load_user_management(root, top_frame)])
 # menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame)])
 menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame, user_data.current_user_id)])
