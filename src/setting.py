@@ -60,20 +60,32 @@ def show_user_info(root, user_id, top_frame):
 
     print(f"DEBUG: Dữ liệu user nhận được: {user_info}")
 
-    # Tạo giao diện hiển thị thông tin user
-    info_frame = tk.Frame(root, padx=20, pady=20)
-    info_frame.pack(expand=True)
+    # Khung chính hiển thị thông tin tài khoản
+    info_frame = tk.Frame(root, padx=20, pady=20, bg="white", bd=2, relief="ridge")
+    info_frame.pack(pady=50, ipadx=20, ipady=20, expand=True)
 
-    tk.Label(info_frame, text="Thông Tin Tài Khoản", font=("Arial", 20, "bold")).pack(pady=(0, 10))
-    tk.Label(info_frame, text=f"👤 Username: {user_info[0]}", font=("Arial", 14)).pack(pady=5, anchor="w")
-    tk.Label(info_frame, text=f"📧 Email: {user_info[1]}", font=("Arial", 14)).pack(pady=5, anchor="w")
-    tk.Label(info_frame, text=f"🔑 Role: {user_info[2]}", font=("Arial", 14)).pack(pady=5, anchor="w")
-    tk.Label(info_frame, text=f"✅ Trạng thái: {'Active' if user_info[3] else 'Inactive'}", font=("Arial", 14)).pack(pady=5, anchor="w")
-    tk.Label(info_frame, text=f"📅 Ngày tạo: {user_info[4]}", font=("Arial", 14)).pack(pady=5, anchor="w")
+    tk.Label(info_frame, text="Thông Tin Tài Khoản", font=("Arial", 22, "bold"), bg="white").pack(pady=(0, 10))
 
-    tk.Button(info_frame, text="🔙 Quay lại", font=("Arial", 14), command=lambda: load_settings(root, top_frame, user_id)).pack(pady=15)
+    # Các thông tin tài khoản
+    details = [
+        (f"👤 Username: {user_info[0]}", "black"),
+        (f"📧 Email: {user_info[1]}", "black"),
+        (f"🔑 Role: {user_info[2]}", "black"),
+        (f"✅ Trạng thái: {'Active' if user_info[3] else 'Inactive'}", "green" if user_info[3] else "red"),
+        (f"📅 Ngày tạo: {user_info[4]}", "black"),
+    ]
+
+    for text, color in details:
+        tk.Label(info_frame, text=text, font=("Arial", 14), fg=color, bg="white", anchor="w").pack(pady=5, fill="x")
+
+     # Nút quay lại giống "Hủy"
+    btn_back = tk.Button(info_frame, text="↩ Quay lại", font=("Arial", 12, "bold"), bg="gray", fg="white",
+                        padx=10, pady=5, command=lambda: [load_settings(root, top_frame, user_id)])  # Quay lại giao diện cài đặt
+    btn_back.pack(pady=15)
+
 
     print("DEBUG: Giao diện thông tin tài khoản đã được tạo thành công!")
+
 
 # Đổi mật khẩu
 def change_password(root, user_id):
@@ -118,26 +130,91 @@ def change_password(root, user_id):
             cursor.close()
             conn.close()
             print("Đã đóng kết nối.")
-    
+
     popup = tk.Toplevel(root)
     popup.title("Đổi mật khẩu")
-    center_window(popup)
-    
-    tk.Label(popup, text="Mật khẩu cũ:").pack()
-    entry_old = tk.Entry(popup, show="*")
-    entry_old.pack()
-    
-    tk.Label(popup, text="Mật khẩu mới:").pack()
-    entry_new = tk.Entry(popup, show="*")
-    entry_new.pack()
-    
-    tk.Label(popup, text="Xác nhận mật khẩu mới:").pack()
-    entry_confirm = tk.Entry(popup, show="*")
-    entry_confirm.pack()
-    
-    tk.Button(popup, text="Xác nhận", command=submit).pack()
+    center_window(popup, 600, 350)
+    popup.configure(bg="white")
+
+    frame = tk.Frame(popup, padx=20, pady=20, bg="white")
+    frame.pack(expand=True)
+
+    tk.Label(frame, text="🔑 Đổi mật khẩu", font=("Arial", 18, "bold"), bg="white").pack(pady=10)
+
+    tk.Label(frame, text="Mật khẩu cũ:", font=("Arial", 14), bg="white").pack(anchor="w")
+    entry_old = tk.Entry(frame, show="*", font=("Arial", 14), width=30)
+    entry_old.pack(pady=5)
+
+    tk.Label(frame, text="Mật khẩu mới:", font=("Arial", 14), bg="white").pack(anchor="w")
+    entry_new = tk.Entry(frame, show="*", font=("Arial", 14), width=30)
+    entry_new.pack(pady=5)
+
+    tk.Label(frame, text="Xác nhận mật khẩu mới:", font=("Arial", 14), bg="white").pack(anchor="w")
+    entry_confirm = tk.Entry(frame, show="*", font=("Arial", 14), width=30)
+    entry_confirm.pack(pady=5)
+
+    btn_submit = tk.Button(frame, text="Xác nhận", font=("Arial", 14, "bold"), bg="blue", fg="white", width=15, command=submit)
+    btn_submit.pack(pady=10)
+
+# Hàm xóa tài khoản
+def delete_account(root, user_id):
+    def confirm_delete():
+        conn = create_connection()
+        if not conn:
+            return
+        
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
+            result = cursor.fetchone()
+            
+            if not result:
+                messagebox.showerror("Lỗi", "Tài khoản không tồn tại!", parent=popup)
+                return
+
+            cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+            conn.commit()
+            messagebox.showinfo("Thành công", "Tài khoản đã bị xóa!", parent=popup)
+            root.attributes("-disabled", False)  # Khôi phục quyền điều khiển cửa sổ chính
+            popup.destroy()  # Đóng cửa sổ xác nhận xóa tài khoản
+        except Exception as e:
+            print(f"Lỗi database: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+
+    # Tạo cửa sổ popup để xác nhận xóa tài khoản
+    popup = tk.Toplevel(root)
+    popup.title("Xóa tài khoản")
+    center_window(popup, 600, 250)
+    popup.configure(bg="white")
+
+    frame = tk.Frame(popup, padx=20, pady=20, bg="white")
+    frame.pack(expand=True)
+
+    tk.Label(frame, text="⚠️ Xác nhận xóa tài khoản", font=("Arial", 18, "bold"), fg="red", bg="white").pack(pady=10)
+    tk.Label(frame, text="Bạn có chắc chắn muốn xóa tài khoản này không?", font=("Arial", 14), bg="white").pack(pady=10)
+
+    btn_frame = tk.Frame(frame, bg="white")
+    btn_frame.pack(pady=10)
+
+    # Nút hủy, không đóng cửa sổ chính
+    btn_cancel = tk.Button(btn_frame, text="Hủy", font=("Arial", 14, "bold"), bg="gray", fg="white", width=10,
+                           command=lambda: popup.destroy())  # Chỉ đóng cửa sổ con popup
+    btn_cancel.pack(side="left", padx=10)
+
+    # Nút xóa tài khoản
+    btn_delete = tk.Button(btn_frame, text="Xóa", font=("Arial", 14, "bold"), bg="red", fg="white", width=10, command=confirm_delete)
+    btn_delete.pack(side="left", padx=10)
+
+    # Vô hiệu hóa cửa sổ chính để ngừng tương tác khi popup mở
+    # root.attributes("-disabled", True)
+
+    # Sự kiện đóng cửa sổ con (popup) khi người dùng nhấn nút "X"
+    # popup.protocol("WM_DELETE_WINDOW", lambda: root.attributes("-disabled", False) or popup.destroy())
 
 # Giao diện cài đặt
+# Thêm nút xóa vào giao diện cài đặt
 def load_settings(root, top_frame, user_id):
     print(f"DEBUG: Tải giao diện Cài đặt cho user_id = {user_id}")
 
@@ -146,20 +223,21 @@ def load_settings(root, top_frame, user_id):
         return
 
     for widget in root.winfo_children():
-        if widget is not top_frame:
-            widget.pack_forget()
+        if widget not in [top_frame]:  # Giữ lại top_frame
+            widget.pack_forget()  # Chỉ ẩn thay vì xóa
 
     setting_frame = tk.Frame(root, padx=20, pady=20)
     setting_frame.pack(fill=tk.BOTH, expand=True)
 
     def add_section(title, options):
-        tk.Label(setting_frame, text=title, font=("Arial", 18, "bold")).pack(anchor="w", pady=(10, 5))
+        tk.Label(setting_frame, text=title, font=("Arial", 28, "bold")).pack(anchor="w", pady=(15, 5))
         for text, command in options:
-            tk.Button(setting_frame, text=text, font=("Arial", 14), fg="black", bd=1, command=command).pack(anchor="w", pady=5)
+            tk.Button(setting_frame, text=text, font=("Arial", 20), fg="gray", bd=0, command=command).pack(anchor="w")
 
     add_section("Tài khoản", [
         ("Thông tin tài khoản", lambda: show_user_info(root, user_id, top_frame)),
         ("Đổi mật khẩu", lambda: change_password(root, user_id)),
+        ("Xóa tài khoản", lambda: delete_account(root, user_id)),  # Nút xóa tài khoản
     ])
 
 # Biểu tượng camera
@@ -175,7 +253,7 @@ def load_settings(root, top_frame, user_id):
     btn_icon.place(relx=0.98, rely=0.95, anchor="se")
 
 if __name__ == "__main__":
-    user_id = 11
+    user_id = 12
     root = tk.Tk()
     root.title("Cài đặt")
     root.geometry("900x700")
