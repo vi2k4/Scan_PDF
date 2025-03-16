@@ -1,7 +1,7 @@
 import sys
 import os
 
-from src import user_data
+import user_data
 
 # Thêm thư mục gốc (PYTHON) vào sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -387,7 +387,7 @@ class Ui_MainWindow(object):
             if found:
                 self.show_message("Thành công", "Đăng nhập thành công!")
                 # Mở menu.py
-                subprocess.Popen([sys.executable, "menu.py", str(user_data.get_current_user())])
+                subprocess.Popen([sys.executable, "src/menu.py", str(user_data.get_current_user())])
                 # Ẩn cửa sổ chính
                 MainWindow.hide()
             else:

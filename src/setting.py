@@ -257,16 +257,25 @@ def load_settings(root, top_frame, user_id):
     setting_frame.pack(fill=tk.BOTH, expand=True)
 
     def add_section(title, options):
-        tk.Label(setting_frame, text=title, font=("Arial", 28, "bold")).pack(anchor="w", pady=(15, 5))
+        tk.Label(setting_frame, text=title, font=("Arial", 25, "bold")).pack(anchor="w", pady=(15, 5))
         for text, command in options:
-            tk.Button(setting_frame, text=text, font=("Arial", 20), fg="gray", bd=0, command=command).pack(anchor="w")
+            tk.Button(setting_frame, text=text, font=("Arial", 17), fg="gray", bd=0, command=command).pack(anchor="w")
 
     add_section("Tài khoản", [
         ("Thông tin tài khoản", lambda: show_user_info(root, user_id, top_frame)),
         ("Đổi mật khẩu", lambda: change_password(root, user_id)),
         ("Xóa tài khoản", lambda: delete_account(root, user_id)),  # Nút xóa tài khoản
     ])
-
+    add_section("Giới thiệu", [
+        ("chính sách", None),
+        ("Giấy phép",None),
+        ("...", None), 
+    ])
+    add_section("Trung tâm trợ giúp", [
+        ("Hỗ trợ", None),
+        ("Địa chỉ: trụ sở SGU",None),
+        ("Hotline: sđtxxx", None),  
+    ])
 # Biểu tượng camera
     try:
         img_path = os.path.abspath("img/Camera.png")
