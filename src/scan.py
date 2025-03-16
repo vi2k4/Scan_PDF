@@ -1,8 +1,11 @@
 import tkinter as tk
+from tkinter import filedialog
 import cv2
 from PIL import Image, ImageTk
+import numpy as np
 
-cap = None  # Biến toàn cục để quản lý camera
+cap = None  
+global selected_image_label  
 
 # Hàm mở camera
 def open_camera(camera_label, center_frame):
@@ -41,13 +44,39 @@ def close_camera(camera_label):
         cap = None
     camera_label.config(image="", text="Camera đã tắt", fg="red")
 
+
+def flash_screen():
+    flash = tk.Toplevel()
+    flash.geometry("1920x1080")  # Kích thước toàn màn hình
+    flash.configure(bg="white")
+    flash.attributes("-fullscreen", True)  # Ẩn thanh tiêu đề
+    flash.after(200, flash.destroy)  # Hiển thị 200ms rồi đóng
+
+
+
 def capture_image():
+    global cap
     if cap is None:
         return
     ret, frame = cap.read()
     if ret:
-        cv2.imwrite("captured_image.jpg", frame)
-        print("Ảnh đã được chụp và lưu")
+        cv2.imwrite("captured_image_flash.jpg", frame)
+        print("Ảnh đã được chụp với hiệu ứng flash!")
+
+
+
+
+def open_image():
+    file_path = filedialog.askopenfilename(
+        title="Chọn hình ảnh",
+        filetypes=[("Image Files", "*.jpg;*.png")]
+    )
+    if file_path:
+        print("Đã chọn ảnh:", file_path)
+        show_selected_image(file_path)
+
+
+
 
 def load_scan(root, top_frame):
     for widget in root.winfo_children():
@@ -75,19 +104,35 @@ def load_scan(root, top_frame):
     capture_btn = tk.Button(button_frame, text="📸 Chụp Ảnh", font=("Arial", 12, "bold"),
                             bg="#4CAF50", fg="white", relief="raised", bd=3, padx=15, pady=5,
                             activebackground="#388E3C", activeforeground="white",
-                            cursor="hand2", height=2, command=capture_image)
+                            cursor="hand2", height=2,command= lambda: [flash_screen() , capture_image()])
     capture_btn.pack(side=tk.LEFT, expand=True, pady=5)
 
     # Bottom Frame (Icons)
     bottom_frame = tk.Frame(root, bg="lightblue", height=50)
     bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
-    photo_icon = tk.Label(bottom_frame, text="🖼", font=("Arial", 20), bg="lightblue")
-    photo_icon.pack(side=tk.LEFT, padx=20, pady=5)
 
     camera_icon = tk.Label(bottom_frame, text="📷", font=("Arial", 20), bg="lightblue")
     camera_icon.pack(side=tk.LEFT, expand=True, padx=20, pady=5)
     camera_icon.bind("<Button-1>", lambda event: open_camera(camera_label, center_frame))
 
-    lightning_icon = tk.Label(bottom_frame, text="⚡", font=("Arial", 20), bg="lightblue")
-    lightning_icon.pack(side=tk.RIGHT, padx=20, pady=5)
+
+    # Nút mở file explorer
+    explorer_icon = tk.Label(bottom_frame, text="📂", font=("Arial", 20), bg="lightblue")
+    explorer_icon.pack(side=tk.RIGHT, padx=20, pady=5)
+    explorer_icon.bind("<Button-1>", lambda event: open_image())
+
+    # Hiển thị ảnh đã chọn
+    selected_image_label = tk.Label(center_frame, bg="white")
+    selected_image_label.pack(pady=10)
+
+
+def show_selected_image(file_path):
+    img = Image.open(file_path)
+    img = img.resize((300, 300))  # Thay đổi kích thước để hiển thị trên giao diện
+    img = ImageTk.PhotoImage(img)
+
+    selected_image_label.config(image=img)
+    selected_image_label.image = img  # Lưu tham chiếu để tránh bị xóa
+
+

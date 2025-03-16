@@ -19,8 +19,10 @@ from PyQt6.QtWidgets import QMessageBox
 import subprocess
 import smtplib
 from email_validator import validate_email, EmailNotValidError
+import user_data
 
-
+def set_current_user(user_id):
+    user_data.current_user_id = user_id
 
 def center_window(self):
         screen = QtWidgets.QApplication.primaryScreen().geometry()
@@ -163,7 +165,14 @@ class SignInDialog(QtWidgets.QDialog):
         main_layout.addStretch()
 
         self.setLayout(main_layout)
-
+        self.setStyleSheet("""
+            QDialog { background-color: #f5f5f5; border-radius: 10px; }
+            QLabel { font-size: 14px; font-weight: bold; color: #333; }
+            QLineEdit { font-size: 14px; padding: 5px; border: 1px solid #ccc; border-radius: 5px; background-color: white; }
+            QLineEdit:focus { border: 1px solid #0078d7; background-color: #e6f2ff; }
+            QPushButton { font-size: 14px; background-color: #0078d7; color: white; border-radius: 5px; padding: 8px; }
+            QPushButton:hover { background-color: #005cbf; }
+        """)
     def check_input(self):
         fields = {
             "Tên người dùng": self.username_input.text().strip(),
@@ -368,6 +377,8 @@ class Ui_MainWindow(object):
 
                 if stored_email == email and stored_password == password:
                     found = True
+                    print(user[0])
+                    set_current_user(user[0])  # Lưu ID
                     break  
             
             if found:

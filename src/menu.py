@@ -3,6 +3,10 @@ from tkinter import Menu
 import scan 
 import subprocess
 
+import user_data
+
+print(user_data.current_user_id)
+
 root = tk.Tk()
 root.title("Custom UI")
 
