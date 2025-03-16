@@ -7,7 +7,7 @@ def create_connection():
             host='localhost',
             database='my_scanner_db',
             user='root',
-            password=''
+            password='anhtuan123'
         )
         if connection.is_connected():
             print("Kết nối thành công!")
