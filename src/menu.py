@@ -7,9 +7,16 @@ import user_controller
 
 import user_data
 
+<<<<<<< HEAD
 
 print(user_data.current_user_id)
+=======
+>>>>>>> 03a7e3b43494ab16ca94f6504a58aa1603b81b81
 
+print("Menu này : ")
+print(user_data.current_user_id)
+print(f"user_id từ menu: {user_data.current_user_id}")
+print(f"DEBUG: user_data.current_user_id = {user_data.current_user_id}, type = {type(user_data.current_user_id)}")
 root = tk.Tk()
 root.title("Custom UI")
 
@@ -42,17 +49,26 @@ def change_module_name(name):
 
 def backToLogin():
     root.destroy()
+<<<<<<< HEAD
     subprocess.Popen(["python", "index.py"])  # Mở file scan.py
 
+=======
+    subprocess.Popen(["python", "src/index.py"])  # Mở file scan.py
+   
+>>>>>>> 03a7e3b43494ab16ca94f6504a58aa1603b81b81
 
 # Main Menu
 menu = Menu(root, tearoff=0)
 menu.add_command(label="Scan", command=lambda: [change_module_name("SCAN"), scan.load_scan(root, top_frame)])
 menu.add_command(label="Ảnh gần đây", command=lambda: change_module_name("ẢNH GẦN ĐÂY"))
 menu.add_command(label="File", command=lambda: change_module_name("FILE"))
+<<<<<<< HEAD
 if(user_data.current_user_id == 1):
     menu.add_command(label="Quản lý tài khoản", command=lambda: [change_module_name("QUẢN LÝ TÀI KHOẢN"), user_controller.load_user_management(root, top_frame)])
 menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame)])
+=======
+menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame, user_data.current_user_id)])
+>>>>>>> 03a7e3b43494ab16ca94f6504a58aa1603b81b81
 menu.add_command(label="Đăng xuất" , command=lambda: backToLogin())
 
 # Bind menu button
