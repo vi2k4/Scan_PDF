@@ -69,18 +69,13 @@ def get_user_info(user_id):
         conn.close()
         print("Đã đóng kết nối.")
 
-# Hiển thị thông tin tài khoản
-def show_user_info(root, user_id, top_frame):
+def show_user_info(root, user_id):
     if user_id is None:
         print("LỖI: user_id bị None, không thể lấy thông tin!")
         return
 
     user_id = str(user_id)  # Đảm bảo user_id luôn là chuỗi
     print(f"DEBUG: Đang hiển thị thông tin user với user_id = {user_id}")
-
-    for widget in root.winfo_children():
-        if widget not in top_frame.winfo_children():
-            widget.pack_forget()
 
     user_info = get_user_info(user_id)
     if not user_info:
@@ -89,11 +84,22 @@ def show_user_info(root, user_id, top_frame):
 
     print(f"DEBUG: Dữ liệu user nhận được: {user_info}")
 
-    # Khung chính hiển thị thông tin tài khoản
-    info_frame = tk.Frame(root, padx=20, pady=20, bg="white", bd=2, relief="ridge")
-    info_frame.pack(pady=50, ipadx=20, ipady=20, expand=True)
+    # Tạo cửa sổ mới (Toplevel)
+    info_window = tk.Toplevel(root)
+    info_window.title("Thông Tin Tài Khoản")
+    info_window.configure(bg="white")
 
-    tk.Label(info_frame, text="Thông Tin Tài Khoản", font=("Arial", 22, "bold"), bg="white").pack(pady=(0, 10))
+    # Căn giữa cửa sổ
+    window_width = 400
+    window_height = 300
+    screen_width = info_window.winfo_screenwidth()
+    screen_height = info_window.winfo_screenheight()
+    x_position = (screen_width - window_width) // 2
+    y_position = (screen_height - window_height) // 2
+    info_window.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
+
+    # Tiêu đề
+    tk.Label(info_window, text="Thông Tin Tài Khoản", font=("Arial", 18, "bold"), bg="white").pack(pady=10)
 
     # Các thông tin tài khoản
     details = [
@@ -105,13 +111,12 @@ def show_user_info(root, user_id, top_frame):
     ]
 
     for text, color in details:
-        tk.Label(info_frame, text=text, font=("Arial", 14), fg=color, bg="white", anchor="w").pack(pady=5, fill="x")
+        tk.Label(info_window, text=text, font=("Arial", 12), fg=color, bg="white", anchor="w").pack(pady=5, fill="x")
 
-     # Nút quay lại giống "Hủy"
-    btn_back = tk.Button(info_frame, text="↩ Quay lại", font=("Arial", 12, "bold"), bg="gray", fg="white",
-                        padx=10, pady=5, command=lambda: [load_settings(root, top_frame, user_id)])  # Quay lại giao diện cài đặt
-    btn_back.pack(pady=15)
-
+    # Nút đóng cửa sổ
+    btn_close = tk.Button(info_window, text="Đóng", font=("Arial", 12, "bold"), bg="gray", fg="white",
+                          padx=10, pady=5, command=info_window.destroy)
+    btn_close.pack(pady=15)
 
     print("DEBUG: Giao diện thông tin tài khoản đã được tạo thành công!")
 
@@ -264,7 +269,7 @@ def load_settings(root, top_frame, user_id):
             tk.Button(setting_frame, text=text, font=("Arial", 17), fg="gray", bd=0, command=command).pack(anchor="w")
 
     add_section("Tài khoản", [
-        ("Thông tin tài khoản", lambda: show_user_info(root, user_id, top_frame)),
+        ("Thông tin tài khoản", lambda: show_user_info(root, user_id)),
         ("Đổi mật khẩu", lambda: change_password(root, user_id)),
         ("Xóa tài khoản", lambda: delete_account(root, user_id)),  # Nút xóa tài khoản
     ])
