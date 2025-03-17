@@ -9,6 +9,8 @@ from PIL import Image, ImageTk
 import os
 import sys
 
+import scan
+
 
 if len(sys.argv) > 1:
     user_id = int (sys.argv[1])
@@ -287,6 +289,7 @@ def load_settings(root, top_frame, user_id):
     btn_icon = tk.Button(root, image=icon, bd=0)
     btn_icon.image = icon
     btn_icon.place(relx=0.98, rely=0.95, anchor="se")
+    btn_icon.bind("<Button-1>", lambda event: scan.load_scan(root, top_frame))
 
 if __name__ == "__main__":
     user_id = 12
