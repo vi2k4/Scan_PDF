@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog, colorchooser
 from PIL import Image, ImageTk
 import os
+from reportlab.pdfgen import canvas
+import subprocess
 
 def load_edit(root, top_frame):
     for widget in root.winfo_children():
@@ -9,17 +11,22 @@ def load_edit(root, top_frame):
             widget.pack_forget()  # Ẩn thay vì xóa
     
     # Camera
-        image_path = os.path.join(os.path.dirname(__file__), "..", "img", "camera.png")
-        camera_icon = ImageTk.PhotoImage(Image.open(image_path).resize((100,80)))
+    image_path = os.path.join(os.path.dirname(__file__), "..", "img", "camera.png")
+    camera_icon = ImageTk.PhotoImage(Image.open(image_path).resize((100,80)))
     # Tạo Frame chính
     edit_frame = tk.Frame(root, bg="white")
     edit_frame.pack(fill=tk.BOTH, expand=True)
 
-    # Thanh tiêu đề
-    
+    # Thanh chức năng
+    toolbar = tk.Frame(edit_frame, bg="#f0efed",height=30)
+    toolbar.pack(fill=tk.X)
+
+    # Phân trang
+    pagebar = tk.Frame(edit_frame, bg="#070e75",width=120)
+    pagebar.pack(fill=tk.Y,side=tk.LEFT)
 
     # Sidebar bên phải
-    sidebar = tk.Frame(edit_frame, width=200, bg="#D3D3D3")
+    sidebar = tk.Frame(edit_frame, width=180, bg="#f0efed")
     sidebar.pack(fill=tk.Y, side=tk.RIGHT)
 
     # Vùng nhập văn bản
@@ -31,7 +38,7 @@ def load_edit(root, top_frame):
     placeholder_label.place(relx=0.5, rely=0.5, anchor="center")  # Căn giữa
 
     # Tuỳ chỉnh font
-    tk.Label(sidebar, text="Font", bg="#D3D3D3").pack()
+   
     font_var = tk.StringVar(value="Times New Roman")
     font_dropdown = ttk.Combobox(sidebar, textvariable=font_var, values=["Arial", "Times New Roman", "Courier New"])
     font_dropdown.pack()
@@ -74,6 +81,7 @@ def load_edit(root, top_frame):
     camera_button = tk.Button(sidebar, image=camera_icon)
     camera_button.image = camera_icon  # Giữ tham chiếu để tránh bị xóa
     camera_button.pack(side=tk.BOTTOM, pady=10)
+    
 
 def search_text(text_area, search_word):
     text_area.tag_remove("search", "1.0", tk.END)
@@ -89,10 +97,11 @@ def search_text(text_area, search_word):
             start_pos = end_pos
 
 def export_text(text_area):
-    file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt"), ("All files", "*.*")])
+    file_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF file", "*.pdf"), ("All files", "*.*")])
     if file_path:
-        with open(file_path, "w", encoding="utf-8") as file:
-            file.write(text_area.get("1.0", tk.END))
+        c = canvas.Canvas(file_path)
+        c.drawString(50, 750, text_area.get("1.0", tk.END))
+        c.save()
 
 def go_back(root, top_frame):
     for widget in root.winfo_children():
