@@ -7,7 +7,7 @@ import user_data
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from db.connect import fetch_data , registedUser
+from db.connect import fetch_data , registedUser, check_email_exists
 print(sys.path)
 # from db.userController import fetch_data
 
@@ -21,6 +21,9 @@ from PyQt6.QtWidgets import QMessageBox
 import subprocess
 import smtplib
 from email_validator import validate_email, EmailNotValidError
+
+
+
 
 
 def show_message(title, message):
@@ -193,6 +196,10 @@ class SignInDialog(QtWidgets.QDialog):
                 return True
             except EmailNotValidError:
                 return False
+        if check_email_exists(email): 
+            QtWidgets.QMessageBox.warning(None, "Lỗi", "Email này đã được sử dụng!")
+            return False
+
 
         if not is_valid_email(email):
             QtWidgets.QMessageBox.warning(None, "Lỗi", "Email không hợp lệ hoặc không tồn tại!")

@@ -50,7 +50,7 @@ def change_module_name(name):
 
 def backToLogin():
     root.destroy()
-    subprocess.Popen(["python", "index.py"])  # Mở file scan.py
+    subprocess.Popen(["python", "src/index.py"])  # Mở file scan.py
 
     # subprocess.Popen(["python", "src/index.py"])  # Mở file scan.py
    

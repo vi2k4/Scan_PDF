@@ -21,7 +21,6 @@ def load_edit(root, top_frame):
     # Sidebar bên phải
     sidebar = tk.Frame(edit_frame, width=200, bg="#D3D3D3")
     sidebar.pack(fill=tk.Y, side=tk.RIGHT)
-
     # Vùng nhập văn bản
     text_area = tk.Text(edit_frame, wrap=tk.WORD, font=("Times New Roman", 14))
     text_area.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
