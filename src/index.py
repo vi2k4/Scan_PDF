@@ -7,8 +7,8 @@ import user_data
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from db.connect import fetch_data , registedUser, check_email_exists
-print(sys.path)
+from db.connect import fetch_data , registedUser, check_email_exists, update_user_password
+# print(sys.path)
 # from db.userController import fetch_data
 
 
@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import QMessageBox
 import subprocess
 import smtplib
 from email_validator import validate_email, EmailNotValidError
-
+from hash import encrypt_password, decrypt_password
 
 
 
@@ -39,6 +39,21 @@ def center_window(self):
             (screen.width() - self.width()) // 2,
             (screen.height() - self.height()) // 2
         )
+
+
+def openForgotPasswordDialog():
+        dialog = ForgotPasswordDialog()
+        dialog.exec()
+
+def openSignInDialog():
+        dialog = SignInDialog()
+        dialog.exec()
+    
+def openChangePassDialog(email , otp):
+        dialog = ChangePasswordDialog(email, otp)
+        dialog.exec()
+
+
 class ForgotPasswordDialog(QtWidgets.QDialog):
     
     def __init__(self):
@@ -82,6 +97,8 @@ class ForgotPasswordDialog(QtWidgets.QDialog):
         # Gửi email
         if self.send_email(email, self.otp_code):
             QtWidgets.QMessageBox.information(self, "Thành công", "Mã xác nhận đã được gửi! Vui lòng kiểm tra email.")
+            openChangePassDialog(email = email, otp = self.otp_code)
+            self.close()
         else:
             QtWidgets.QMessageBox.critical(self, "Lỗi", "Không thể gửi email. Vui lòng thử lại sau!")
 
@@ -123,6 +140,103 @@ class ForgotPasswordDialog(QtWidgets.QDialog):
             print(f"Lỗi gửi email: {e}")
             return False
         
+class ChangePasswordDialog(QtWidgets.QDialog):
+    def __init__(self, email = None, otp = None):
+        super().__init__()
+        self.email = email
+        self.sentOTP = otp
+
+        self.setWindowTitle("Đổi mật khẩu")
+        self.setFixedSize(400, 400)
+
+        # ========== Main Layout ==========
+        main_layout = QtWidgets.QVBoxLayout()
+        main_layout.setContentsMargins(30, 30, 30, 30)
+        main_layout.setSpacing(20)
+
+        # ========== Tiêu đề ==========
+        title_label = QtWidgets.QLabel("Đổi mật khẩu")
+        title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        title_label.setFont(QtGui.QFont("Arial", 16, QtGui.QFont.Weight.Bold))
+        main_layout.addWidget(title_label)
+
+        # ========== Form layout ==========
+        form_layout = QtWidgets.QFormLayout()
+        form_layout.setSpacing(15)
+
+        self.email_input = QtWidgets.QLineEdit()
+        self.email_input.setPlaceholderText("Nhập email")
+        self.email_input.setText(self.email)
+
+
+        self.otp_input = QtWidgets.QLineEdit()
+        self.otp_input.setPlaceholderText("Nhập mã OTP")
+
+        self.password_input = QtWidgets.QLineEdit()
+        self.password_input.setPlaceholderText("Mật khẩu mới")
+        self.password_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+
+        self.re_password_input = QtWidgets.QLineEdit()
+        self.re_password_input.setPlaceholderText("Nhập lại mật khẩu")
+        self.re_password_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+
+        form_layout.addRow("Email:", self.email_input)
+        form_layout.addRow("OTP:", self.otp_input)
+        form_layout.addRow("Mật khẩu:", self.password_input)
+        form_layout.addRow("Xác nhận:", self.re_password_input)
+
+        main_layout.addLayout(form_layout)
+
+        # ========== Nút Submit ==========
+        self.submit_btn = QtWidgets.QPushButton("Đổi mật khẩu")
+        self.submit_btn.setFixedHeight(40)
+        self.submit_btn.setStyleSheet("font-weight: bold;")
+        self.submit_btn.clicked.connect(self.changePassword)
+        main_layout.addWidget(self.submit_btn, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        # ========== Gán layout chính ==========
+        self.setLayout(main_layout)
+
+    def checkInput(self):
+        fields = {
+            "Email": self.email_input.text().strip(),
+            "OTP": self.otp_input.text().strip(),
+            "Mật khẩu": self.password_input.text().strip(),
+            "Nhập lại mật khẩu": self.re_password_input.text().strip(),
+        }
+
+        # Kiểm tra xem có trường nào trống không
+        for field_name, value in fields.items():
+            if not value:
+                QtWidgets.QMessageBox.warning(self, "Lỗi", f"{field_name} không được để trống!")
+                return False
+
+
+        if len(fields["Mật khẩu"]) < 6:
+            QtWidgets.QMessageBox.warning(self, "Lỗi", "Mật khẩu phải có ít nhất 6 ký tự!")
+            return False
+
+        if fields["Mật khẩu"] != fields["Nhập lại mật khẩu"]:
+            QtWidgets.QMessageBox.warning(self, "Lỗi", "Mật khẩu nhập lại không khớp!")
+            return False
+        
+        if fields["OTP"] != self.sentOTP:
+            QtWidgets.QMessageBox.warning(self, "Lỗi", "OTP không chính xác")
+            return False
+        
+        return True
+
+    def changePassword(self):
+        if not self.checkInput():
+            return
+
+        e = self.email_input.text()
+        p = self.password_input.text()
+        hashP = encrypt_password(p)
+        if update_user_password(e,hashP):
+          QtWidgets.QMessageBox.information(self,"Thành công", "Đổi mật khẩu thành công")
+          self.close()
+
 
 
 
@@ -215,7 +329,7 @@ class SignInDialog(QtWidgets.QDialog):
         if password != re_password:
             QtWidgets.QMessageBox.warning(self, "Lỗi", "Mật khẩu nhập lại không khớp!")
             return False
-
+        QtWidgets.QMessageBox.information(self,"Thành công", "Đăng kí tài khoản thành công")
         return True
 
    
@@ -223,18 +337,16 @@ class SignInDialog(QtWidgets.QDialog):
         if not self.check_input():
             return  
 
+        # Hash mật khẩu
+        passAfterCrypt = encrypt_password(self.password_input.text()) 
+
         self.user_info["email"] = self.email_input.text().strip()
         self.user_info["username"] = self.username_input.text().strip()
-        self.user_info["password_hash"] = self.password_input.text()  # Cần hash mật khẩu
-
-        print("Đăng ký thành công!")
+        self.user_info["password_hash"] = passAfterCrypt 
 
         registedUser(self.user_info)
         self.accept()
 
-
-# def set_current_user(userId):
-#     user_data.current_user_id = userId
 
 
 class Ui_MainWindow(object):
@@ -293,7 +405,7 @@ class Ui_MainWindow(object):
         font.setPointSize(7)
         self.forget_pass.setFont(font)
         self.forget_pass.setObjectName("forget_pass")
-        self.forget_pass.mousePressEvent = self.openForgotPasswordDialog 
+        self.forget_pass.mousePressEvent = lambda event: openForgotPasswordDialog()
 
         self.sign_in = QtWidgets.QLabel(parent=self.centralwidget)
         self.sign_in.setGeometry(QtCore.QRect(660, 280, 40, 20))
@@ -304,7 +416,7 @@ class Ui_MainWindow(object):
         self.sign_in.setTextFormat(QtCore.Qt.TextFormat.AutoText)
         self.sign_in.setOpenExternalLinks(True)
         self.sign_in.setObjectName("sign_in")
-        self.sign_in.mousePressEvent = self.openSignInDialog  
+        self.sign_in.mousePressEvent = lambda event: openSignInDialog()
 
     
 
@@ -370,32 +482,21 @@ class Ui_MainWindow(object):
                 self.show_message("Lỗi", "Vui lòng nhập email và mật khẩu!")
                 return
 
-            try:
-                list = fetch_data()
-                if list is None:
-                    raise Exception("Không lấy được dữ liệu từ database!")
-                print("Dữ liệu lấy từ DB:", list)
-            except Exception as e:
-                print(f"Lỗi khi truy vấn dữ liệu: {e}")
-                self.show_message("Lỗi", f"Lỗi khi truy vấn dữ liệu: {e}")
-                return
-
+            key = b"ljlJeB1u3Yyh8tYYYAObAevf5-nbv5qZz0_sPihFll8="
+            list = fetch_data()
             found = False
             for user in list:
                 stored_email = user[3]
                 stored_password = user[2]
-                if stored_email == email and stored_password == password:
+                real_password = decrypt_password( stored_password)
+                if stored_email == email and real_password == password:
                     found = True
                     user_data.set_current_user(user[0])
-                    print(user_data.current_user_id)
-                    break  # Thoát khỏi vòng lặp (đã tìm thấy user)
+                    break
 
-            # Xử lý sau khi vòng lặp kết thúc
             if found:
                 self.show_message("Thành công", "Đăng nhập thành công!")
-                # Mở menu.py
                 subprocess.Popen([sys.executable, "src/menu.py", str(user_data.get_current_user())])
-                # Ẩn cửa sổ chính
                 MainWindow.hide()
             else:
                 self.show_message("Lỗi", "Email hoặc mật khẩu không chính xác!")
@@ -414,13 +515,10 @@ class Ui_MainWindow(object):
         self.forget_pass.setText(_translate("MainWindow", "Quên mật khẩu ?"))
         self.sign_in.setText(_translate("MainWindow", "Sign in"))
 
-    def openForgotPasswordDialog(self, event):
-        dialog = ForgotPasswordDialog()
-        dialog.exec()
+   
 
-    def openSignInDialog(self, event):
-        dialog = SignInDialog()
-        dialog.exec()
+
+
 
 
 if __name__ == "__main__":

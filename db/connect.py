@@ -91,3 +91,32 @@ def check_email_exists(email):
             connection.close()
             print("Đã đóng kết nối.")
 
+def update_user_password(email, new_password_hash):
+    connection = create_connection()
+    if not connection:
+        print("Không thể kết nối database.")
+        return False
+
+    try:
+        cursor = connection.cursor()
+        sql = "UPDATE users SET password_hash = %s WHERE email = %s"
+        values = (new_password_hash, email)
+        cursor.execute(sql, values)
+        connection.commit()
+
+        if cursor.rowcount > 0:
+            print("Cập nhật mật khẩu thành công!")
+            return True
+        else:
+            print("Không tìm thấy người dùng với email này.")
+            return False
+
+    except Error as e:
+        print(f"Lỗi truy vấn: {e}")
+        return False
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("Đã đóng kết nối.")
