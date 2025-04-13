@@ -7,6 +7,7 @@ import setting
 import user_controller
 import edit
 import user_data
+import qlfile  # Import qlfile module
 
 if len(sys.argv) > 1:
     user_id = sys.argv[1]
@@ -60,7 +61,7 @@ menu = Menu(root, tearoff=0)
 menu.add_command(label="Scan", command=lambda: [change_module_name("SCAN"), scan.load_scan(root, top_frame)])
 menu.add_command(label="Chỉnh sửa", command=lambda: [change_module_name("CHỈNH SỬA"), edit.load_edit(root, top_frame)])
 menu.add_command(label="Ảnh gần đây", command=lambda: change_module_name("ẢNH GẦN ĐÂY"))
-menu.add_command(label="File", command=lambda: change_module_name("FILE"))
+menu.add_command(label="File", command=lambda: [change_module_name("FILE"), qlfile.FileManager(root)])  # Gọi FileManager ở đây
 if(user_id == "1"):
     menu.add_command(label="Quản lý tài khoản", command=lambda: [change_module_name("QUẢN LÝ TÀI KHOẢN"), user_controller.load_user_management(root, top_frame)])
 # menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame)])
