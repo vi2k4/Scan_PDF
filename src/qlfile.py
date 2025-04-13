@@ -6,7 +6,9 @@ from datetime import datetime
 from PIL import Image, ImageTk
 import webbrowser
 def load_file(root, top_frame):
+
     print("DEBUG: Tải giao diện Quản lý File")
+    print(f"Top Frame type: {type(top_frame)}")
 
     if not top_frame:
         print("LỖI: top_frame = None, không thể hiển thị Quản lý File")
@@ -14,32 +16,28 @@ def load_file(root, top_frame):
 
     # Ẩn tất cả các widget ngoài top_frame
     for widget in root.winfo_children():
-        if widget != top_frame:  # Giữ lại top_frame
-            widget.pack_forget()  # Sử dụng pack_forget thay vì destroy để tránh tạo lại không cần thiết
+        if widget not in [top_frame]:
+            widget.pack_forget()
 
-    # Tạo lại giao diện Quản lý File
-    file_manager_frame = tk.Frame(root, padx=0, pady=0)
-    file_manager_frame.pack(fill=tk.BOTH, expand=True, pady=0)  # Đảm bảo không có khoảng cách (pady=0)
+    # Gọi lại FileManager để load giao diện quản lý file
+    file_manager = FileManager(root)
+    file_manager.load_files()
 
-    # Đảm bảo rằng top_frame không thay đổi kích thước tự động và không có khoảng cách
-    top_frame.pack_propagate(False)  # Ngừng tự động thay đổi kích thước của top_frame
-    top_frame.pack(side="top", fill="x", padx=0, pady=0)  # Đảm bảo không có khoảng cách thừa
 
-    # Khởi tạo FileManager với root thay vì file_manager_frame
-    file_manager = FileManager(root)  # Truyền root vào thay vì frame
-    file_manager.load_files()  # Nếu cần, bạn có thể gọi lại các phương thức để load lại file
 
 class FileManager:
     def __init__(self, root):
         self.root = root
         # self.root.title("Quản lý PDF")
+        # self.selected_widgets.clear()  # Thêm dòng này vào đầu
+
         self.current_mode = "pdf"
         self.selected_file = None
         self.selected_widgets = {}
 
         self.build_ui()
         self.update_header_style()
-        self.load_files()
+        # self.load_files()
    
 
     def build_ui(self):
@@ -197,25 +195,41 @@ class FileManager:
     def copy_to_pin_folder(self, name):
         shutil.copy(os.path.join(self.current_mode, name), "pdf_ghim")
         self.load_files()
+        messagebox.showinfo("Ghim thành công", f"Đã ghim file: {name}")
 
     def unpin_file(self, name):
         os.remove(os.path.join("pdf_ghim", name))
         self.load_files()
+        messagebox.showinfo("Bỏ ghim", f"Đã bỏ ghim file: {name}")
 
     def delete_file(self):
         if self.selected_file and os.path.exists(self.selected_file):
+            confirm = messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa file này?\n\n{os.path.basename(self.selected_file)}")
+        if confirm:
             os.remove(self.selected_file)
             self.load_files()
+            messagebox.showinfo("Đã xóa", f"File đã được xóa: {os.path.basename(self.selected_file)}")
+
 
     def delete_all_files(self):
         folder = os.path.abspath(self.current_mode)
-        for filename in os.listdir(folder):
-            os.remove(os.path.join(folder, filename))
-        self.load_files()
+        files = os.listdir(folder)
+        if not files:
+            messagebox.showinfo("Không có file", "Thư mục hiện không có file nào để xóa.")
+            return
+
+        confirm = messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa TẤT CẢ {len(files)} file?")
+        if confirm:
+            for filename in files:
+                os.remove(os.path.join(folder, filename))
+            self.load_files()
+            messagebox.showinfo("Đã xóa", f"Đã xóa tất cả file trong mục: {self.current_mode}")
+
 
 if __name__ == "__main__":
     root = tk.Tk()
     root.geometry("900x700")
+
     root.config(padx=0, pady=0)  # Loại bỏ padding ngoài gốc
     app = FileManager(root)
     root.mainloop()
