@@ -2,8 +2,13 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 from db import user_model
+import re
 # from user_model import hash_password
+from src.hash import encrypt_password, decrypt_password
 
+def is_valid_email(email: str) -> bool:
+    email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return re.match(email_regex, email) is not None
 
 def center_window(win, width=400, height=300):
     screen_width = win.winfo_screenwidth()
@@ -119,10 +124,18 @@ def load_user_management(root, top_frame):
         def submit_add():
             username = username_entry.get().strip()
             email = email_entry.get().strip()
-            password = pass_entry.get().strip()
-
+            password = encrypt_password(pass_entry.get().strip())
+            
             if not username or not email or not password:
                 messagebox.showwarning("Cảnh báo", "Vui lòng nhập đủ thông tin!", parent=popup)
+                return
+            
+            if len(pass_entry.get().strip()) < 6:
+                messagebox.showwarning("Cảnh báo", "Phải có ít nhất 6 ký tự", parent=popup)
+                return
+            
+            if not is_valid_email(email):
+                messagebox.showwarning("Cảnh báo", "Email sai dịnh dạng!", parent=popup)
                 return
 
             # Gọi model để thêm user
@@ -162,10 +175,18 @@ def load_user_management(root, top_frame):
         def submit_edit():
             new_username = username_entry.get().strip()
             new_email = email_entry.get().strip()
-            new_password = pass_entry.get().strip()
+            new_password = encrypt_password(pass_entry.get().strip())
 
             if not new_username or not new_email:
                 messagebox.showwarning("Cảnh báo", "Username và Email không được để trống!", parent=popup)
+                return
+            
+            if not is_valid_email(new_email):
+                messagebox.showwarning("Cảnh báo", "Email sai dịnh dạng!", parent=popup)
+                return
+            
+            if len(pass_entry.get().strip()) < 6:
+                messagebox.showwarning("Cảnh báo", "Phải có ít nhất 6 ký tự", parent=popup)
                 return
 
             result = user_model.update_user(
