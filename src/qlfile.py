@@ -3,53 +3,49 @@ import shutil
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
-from functools import partial
 from PIL import Image, ImageTk
 import webbrowser
-import scan
+def load_file(root, top_frame):
+    print("DEBUG: Tải giao diện Quản lý File")
+
+    if not top_frame:
+        print("LỖI: top_frame = None, không thể hiển thị Quản lý File")
+        return
+
+    # Ẩn tất cả các widget ngoài top_frame
+    for widget in root.winfo_children():
+        if widget != top_frame:  # Giữ lại top_frame
+            widget.pack_forget()  # Sử dụng pack_forget thay vì destroy để tránh tạo lại không cần thiết
+
+    # Tạo lại giao diện Quản lý File
+    file_manager_frame = tk.Frame(root, padx=0, pady=0)
+    file_manager_frame.pack(fill=tk.BOTH, expand=True, pady=0)  # Đảm bảo không có khoảng cách (pady=0)
+
+    # Đảm bảo rằng top_frame không thay đổi kích thước tự động và không có khoảng cách
+    top_frame.pack_propagate(False)  # Ngừng tự động thay đổi kích thước của top_frame
+    top_frame.pack(side="top", fill="x", padx=0, pady=0)  # Đảm bảo không có khoảng cách thừa
+
+    # Khởi tạo FileManager với root thay vì file_manager_frame
+    file_manager = FileManager(root)  # Truyền root vào thay vì frame
+    file_manager.load_files()  # Nếu cần, bạn có thể gọi lại các phương thức để load lại file
 
 class FileManager:
     def __init__(self, root):
-        
         self.root = root
-        self.root.title("Quản lý PDF")
+        # self.root.title("Quản lý PDF")
         self.current_mode = "pdf"
         self.selected_file = None
-        self.selected_frame = None
-        self.selected_content_frame = None
-        self.selected_action_frame = None
-        self.selected_icon_label = None
-        self.selected_name_label = None
-        self.selected_time_label = None
+        self.selected_widgets = {}
 
         self.build_ui()
         self.update_header_style()
         self.load_files()
-
-        # Chờ cửa sổ root hoàn tất trước khi tạo ảnh
-        self.root.after(10, self.load_icons)  # Đảm bảo ảnh được tạo sau khi root đã sẵn sàng
-
-    def load_icons(self):
-        try:
-            img_path = os.path.abspath("img/Camera.png")
-            img = Image.open(img_path).resize((100, 100))
-        except FileNotFoundError:
-            img = Image.new("RGB", (50, 50), (200, 200, 200))  # Tạo ảnh màu xám nếu không tìm thấy
-
-        icon = ImageTk.PhotoImage(img)
-        btn_icon = tk.Button(self.root, image=icon, bd=0)
-        btn_icon.image = icon
-        btn_icon.place(relx=0.98, rely=0.95, anchor="se")
-        btn_icon.bind("<Button-1>", lambda event: scan.load_scan(root, top_frame))
-
-    def load_scan(self):
-        # Thêm logic cho load scan ở đây nếu cần
-        print("Camera scan initiated...")
+   
 
     def build_ui(self):
         # Header
         self.header = tk.Frame(self.root, bg="#f5f5f5", height=60)
-        self.header.pack(side=tk.TOP, fill=tk.X)
+        self.header.pack(side=tk.TOP, fill=tk.X, padx=0, pady=0)  # Kiểm tra lại padding của header
         self.header.pack_propagate(False)
 
         self.lbl_file = tk.Label(self.header, text="File", font=("Arial", 20, "bold"),
@@ -67,7 +63,6 @@ class FileManager:
         self.underline = tk.Frame(self.header, bg="#00BFFF", height=3, width=100)
         self.underline.place(x=0, rely=1.0, anchor='sw')
 
-        # Nút Xóa
         self.delete_btn = tk.Button(self.header, text="Xóa", font=("Arial", 12, "bold"),
                                     bg="red", fg="white", command=self.delete_file)
         self.delete_btn.pack(side=tk.RIGHT, padx=10)
@@ -78,7 +73,7 @@ class FileManager:
 
         # Scroll area
         main_frame = tk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)  # Kiểm tra padding cho main_frame
 
         self.canvas = tk.Canvas(main_frame, bg="white")
         scrollbar = tk.Scrollbar(main_frame, command=self.canvas.yview)
@@ -88,7 +83,7 @@ class FileManager:
         self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
         self.canvas.configure(yscrollcommand=scrollbar.set)
 
-        self.canvas.pack(side="left", fill="both", expand=True)
+        self.canvas.pack(side="left", fill="both", expand=True, padx=0, pady=0)  # Kiểm tra lại padding cho canvas
         scrollbar.pack(side="right", fill="y")
 
     def switch_mode(self, mode):
@@ -131,25 +126,20 @@ class FileManager:
         frame.pack(fill=tk.X, padx=20, pady=5)
         frame.pack_propagate(False)
 
-        # Icon
         icon_frame = tk.Frame(frame, bg=bg_normal, width=50)
         icon_frame.pack(side=tk.LEFT, padx=10)
 
         try:
-            icon_img = Image.open("img/pdf.png").resize((40, 40))  # Mở và resize ảnh PDF
-            pdf_icon = ImageTk.PhotoImage(icon_img)  # Chuyển đổi ảnh thành dạng có thể sử dụng trong Tkinter
+            icon_img = Image.open("img/pdf.png").resize((40, 40))
+            pdf_icon = ImageTk.PhotoImage(icon_img)
         except:
-            pdf_icon = None  # Nếu không có ảnh thì gán là None
+            pdf_icon = None
 
-        if pdf_icon:
-            icon_lbl = tk.Label(icon_frame, image=pdf_icon, bg=bg_normal)
-            icon_lbl.image = pdf_icon  # Lưu giữ tham chiếu đến ảnh để tránh bị mất
-            icon_lbl.pack()
-        else:
-            icon_lbl = tk.Label(icon_frame, text="PDF", bg=bg_normal)
-            icon_lbl.pack()
+        icon_lbl = tk.Label(icon_frame, image=pdf_icon if pdf_icon else None,
+                            text="PDF" if not pdf_icon else "", bg=bg_normal)
+        if pdf_icon: icon_lbl.image = pdf_icon
+        icon_lbl.pack()
 
-        # Content
         content_frame = tk.Frame(frame, bg=bg_normal)
         content_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
 
@@ -161,15 +151,14 @@ class FileManager:
                             font=("Arial", 14), bg=bg_normal, anchor="w", width=15)
         lbl_date.pack(side=tk.RIGHT)
 
-        # Actions
         action_frame = tk.Frame(frame, bg=bg_normal)
         action_frame.pack(side=tk.RIGHT, padx=10)
 
         if self.current_mode == "pdf":
             pin_btn = tk.Label(action_frame, text="☆", font=("Arial", 25), bg=bg_normal, cursor="hand2")
             pin_btn.pack(side=tk.LEFT)
-            pin_btn.bind("<Button-1>", lambda event, name=name: self.copy_to_pin_folder(name, event))
-        elif self.current_mode == "pdf_ghim":
+            pin_btn.bind("<Button-1>", lambda e: self.copy_to_pin_folder(name))
+        else:
             unpin_btn = tk.Label(action_frame, text="🗙", font=("Arial", 20), bg=bg_normal, cursor="hand2")
             unpin_btn.pack(side=tk.LEFT)
             unpin_btn.bind("<Button-1>", lambda e: self.unpin_file(name))
@@ -178,65 +167,43 @@ class FileManager:
         edit_btn.pack(side=tk.LEFT)
         edit_btn.bind("<Button-1>", lambda e: messagebox.showinfo("Chỉnh sửa", f"Chỉnh sửa {name}"))
 
-        # Tất cả widget liên quan đều bind chọn file + mở file
-        widgets = [frame, icon_frame, content_frame, action_frame,
-                icon_lbl, lbl_name, lbl_date, edit_btn]
+        widgets = [frame, icon_frame, content_frame, action_frame, icon_lbl, lbl_name, lbl_date, edit_btn]
 
         for w in widgets:
-            w.bind("<Button-1>", lambda e, f=frame, cf=content_frame, af=action_frame, 
-                il=icon_lbl, n=lbl_name, t=lbl_date: self.select_file(os.path.join(folder, name), f, cf, af, il, n, t))
+            w.bind("<Button-1>", lambda e, path=os.path.join(folder, name): self.select_file(path, frame, icon_lbl, lbl_name, lbl_date, content_frame, action_frame))
             w.bind("<Double-1>", lambda e, path=os.path.join(folder, name): self.open_file(path))
 
-    def select_file(self, path, frame, cf, af, icon_lbl, name_lbl, time_lbl):
-        # Kiểm tra nếu frame cũ còn tồn tại thì reset màu
-        try:
-            if self.selected_frame and self.selected_frame.winfo_exists():
-                self.selected_frame.config(bg="#4CE5F2")
-            if self.selected_content_frame and self.selected_content_frame.winfo_exists():
-                self.selected_content_frame.config(bg="#4CE5F2")
-            if self.selected_action_frame and self.selected_action_frame.winfo_exists():
-                self.selected_action_frame.config(bg="#4CE5F2")
-            if self.selected_icon_label and self.selected_icon_label.winfo_exists():
-                self.selected_icon_label.config(bg="#4CE5F2")
-            if self.selected_name_label and self.selected_name_label.winfo_exists():
-                self.selected_name_label.config(bg="#4CE5F2")
-            if self.selected_time_label and self.selected_time_label.winfo_exists():
-                self.selected_time_label.config(bg="#4CE5F2")
-        except:
-            pass
+    def select_file(self, path, frame, *widgets):
+        self.reset_selection()
+        self.selected_file = path
+        self.selected_widgets = {
+            "frame": frame,
+            "widgets": widgets
+        }
+        frame.config(bg="#4CC2F1")
+        for w in widgets:
+            w.config(bg="#4CC2F1")
 
-        # Lưu frame hiện tại để xử lý tiếp
-        self.selected_frame = frame
-        self.selected_content_frame = cf
-        self.selected_action_frame = af
-        self.selected_icon_label = icon_lbl
-        self.selected_name_label = name_lbl
-        self.selected_time_label = time_lbl
-
-        # Đổi màu để hiển thị chọn
-        self.selected_frame.config(bg="#4CC2F1")
-        self.selected_content_frame.config(bg="#4CC2F1")
-        self.selected_action_frame.config(bg="#4CC2F1")
-        self.selected_icon_label.config(bg="#4CC2F1")
-        self.selected_name_label.config(bg="#4CC2F1")
-        self.selected_time_label.config(bg="#4CC2F1")
+    def reset_selection(self):
+        if self.selected_widgets:
+            self.selected_widgets["frame"].config(bg="#4CE5F2")
+            for w in self.selected_widgets["widgets"]:
+                w.config(bg="#4CE5F2")
+            self.selected_widgets.clear()
 
     def open_file(self, path):
-        webbrowser.open(path)  # Mở file PDF
+        webbrowser.open(path)
 
-    def copy_to_pin_folder(self, name, event):
-        source_folder = os.path.abspath(self.current_mode)
-        destination_folder = os.path.abspath("pdf_ghim")
-        shutil.copy(os.path.join(source_folder, name), destination_folder)
+    def copy_to_pin_folder(self, name):
+        shutil.copy(os.path.join(self.current_mode, name), "pdf_ghim")
         self.load_files()
 
     def unpin_file(self, name):
-        file_path = os.path.abspath(f"pdf_ghim/{name}")
-        os.remove(file_path)
+        os.remove(os.path.join("pdf_ghim", name))
         self.load_files()
 
     def delete_file(self):
-        if self.selected_file:
+        if self.selected_file and os.path.exists(self.selected_file):
             os.remove(self.selected_file)
             self.load_files()
 
@@ -249,5 +216,6 @@ class FileManager:
 if __name__ == "__main__":
     root = tk.Tk()
     root.geometry("900x700")
+    root.config(padx=0, pady=0)  # Loại bỏ padding ngoài gốc
     app = FileManager(root)
     root.mainloop()

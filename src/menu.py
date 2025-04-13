@@ -55,21 +55,17 @@ def backToLogin():
     root.destroy()
     subprocess.Popen(["python", "src/index.py"])  # Mở file scan.py
 
-    # subprocess.Popen(["python", "src/index.py"])  # Mở file scan.py
-   
-
 # Main Menu
 menu = Menu(root, tearoff=0)
 menu.add_command(label="Scan", command=lambda: [change_module_name("SCAN"), scan.load_scan(root, top_frame)])
 menu.add_command(label="Chỉnh sửa", command=lambda: [change_module_name("CHỈNH SỬA"), edit.load_edit(root, top_frame)])
 menu.add_command(label="Ảnh gần đây", command=lambda: change_module_name("ẢNH GẦN ĐÂY"))
-menu.add_command(label="File", command=lambda: [change_module_name("FILE"), qlfile.FileManager(root)])  # Gọi FileManager ở đây
+menu.add_command(label="File", command=lambda: [change_module_name("FILE"), qlfile.load_file(root, top_frame)])  # Đảm bảo load đúng
 if (user_id != "1"):
     menu.add_command(label="Hỗ Trợ", command=lambda: [change_module_name("HỖ TRỢ"), tiket.load_user_support(root,top_frame,user_id)])
 if(user_id == "1"):
     menu.add_command(label="Quản lý hỗ trợ", command=lambda: [change_module_name("QUẢN LÝ HỖ TRỢ"), ticket_repliers.load_admin_support(root,top_frame)])
     menu.add_command(label="Quản lý tài khoản", command=lambda: [change_module_name("QUẢN LÝ TÀI KHOẢN"), user_controller.load_user_management(root, top_frame)])
-# menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame)])
 menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame, user_id)])
 menu.add_command(label="Đăng xuất" , command=lambda: backToLogin())
 
@@ -80,5 +76,6 @@ def show_menu(event=None):
 
 menu_button.config(command=show_menu)
 root.bind("<Button-3>", show_menu)
+
 
 root.mainloop()
