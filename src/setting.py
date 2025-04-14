@@ -8,7 +8,8 @@ import mysql
 from PIL import Image, ImageTk
 import os
 import sys
-
+from cryptography.fernet import Fernet
+from tkinter import messagebox
 import scan
 
 
@@ -121,7 +122,21 @@ def show_user_info(root, user_id):
     print("DEBUG: Giao diện thông tin tài khoản đã được tạo thành công!")
 
 
-# Đổi mật khẩu
+
+# Hàm mã hóa/giải mã mật khẩu
+key = b"ljlJeB1u3Yyh8tYYYAObAevf5-nbv5qZz0_sPihFll8="
+
+def encrypt_password(password: str) -> str:
+    fernet = Fernet(key)
+    encrypted = fernet.encrypt(password.encode())
+    return encrypted.decode()
+
+def decrypt_password(encrypted_password: str) -> str:
+    fernet = Fernet(key)
+    decrypted = fernet.decrypt(encrypted_password.encode())
+    return decrypted.decode()
+
+# Hàm đổi mật khẩu có mã hóa
 def change_password(root, user_id):
     def submit():
         old_pass = entry_old.get().strip()
@@ -135,7 +150,7 @@ def change_password(root, user_id):
         if new_pass != confirm_pass:
             messagebox.showerror("Lỗi", "Mật khẩu mới không khớp!", parent=popup)
             return
-        
+
         conn = create_connection()
         if not conn:
             return
@@ -148,18 +163,27 @@ def change_password(root, user_id):
             if not result:
                 messagebox.showerror("Lỗi", "Tài khoản không tồn tại!", parent=popup)
                 return
-            
-            if old_pass != result[0]:
+
+            # Giải mã mật khẩu đã lưu và so sánh
+            try:
+                saved_password = decrypt_password(result[0])
+            except Exception:
+                messagebox.showerror("Lỗi", "Lỗi giải mã mật khẩu cũ!", parent=popup)
+                return
+
+            if old_pass != saved_password:
                 messagebox.showerror("Lỗi", "Mật khẩu cũ không đúng!", parent=popup)
                 return
             
-            cursor.execute("UPDATE users SET password_hash = %s WHERE user_id = %s", (new_pass, user_id))
+            encrypted_new = encrypt_password(new_pass)
+            cursor.execute("UPDATE users SET password_hash = %s WHERE user_id = %s", (encrypted_new, user_id))
             conn.commit()
             
             messagebox.showinfo("Thành công", "Đổi mật khẩu thành công!", parent=popup)
             popup.destroy()
         except Exception as e:
             print(f"Lỗi database: {e}")
+            messagebox.showerror("Lỗi", "Có lỗi xảy ra khi cập nhật mật khẩu!", parent=popup)
         finally:
             cursor.close()
             conn.close()
@@ -189,6 +213,7 @@ def change_password(root, user_id):
 
     btn_submit = tk.Button(frame, text="Xác nhận", font=("Arial", 14, "bold"), bg="blue", fg="white", width=15, command=submit)
     btn_submit.pack(pady=10)
+
 
 # Hàm xóa tài khoản
 def delete_account(root, user_id):

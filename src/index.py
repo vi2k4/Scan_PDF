@@ -104,7 +104,8 @@ class ForgotPasswordDialog(QtWidgets.QDialog):
 
     def is_valid_email(self, email):
         try:
-            validate_email(email, check_deliverability=True)
+            # validate_email(email, check_deliverability=True)
+            validate_email(email)
             return True
         except EmailNotValidError:
             return False
@@ -126,6 +127,7 @@ class ForgotPasswordDialog(QtWidgets.QDialog):
             msg = MIMEMultipart()
             msg["From"] = sender_email
             msg["To"] = recipient_email
+            print(recipient_email)
             msg["Subject"] = subject
             msg.attach(MIMEText(body, "plain"))
 
