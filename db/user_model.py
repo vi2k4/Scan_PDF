@@ -2,6 +2,7 @@
 import mysql.connector
 from mysql.connector import Error
 import hashlib
+from db.connect import create_connection
 
 
 def connect_db():
@@ -43,6 +44,26 @@ def get_all_users():
     except Error as e:
         print(f"Lỗi database: {e}")
         return None
+    
+def get_role_user_by_id(user_id):
+    try:
+        conn = create_connection()
+        cursor = conn.cursor()
+        query = "SELECT role FROM users WHERE user_id = %s"
+        cursor.execute(query, (user_id,))
+        data =  cursor.fetchone()[0]
+        return data
+    except Error as e:
+        print ("Error: {e}")
+        return
+    finally:
+        if (cursor):
+            cursor.close()
+        if (conn):
+            conn.close()
+        
+        
+        
 
 
 def search_users_by_username(username_substring: str):

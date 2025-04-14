@@ -139,7 +139,7 @@ def load_user_management(root, top_frame):
                 return
 
             # Gọi model để thêm user
-            result = user_model.insert_user(username, email, password, "USER", 1)
+            result = user_model.insert_user(username, email, password, "user", 1)
             if result is True:
                 messagebox.showinfo("Thành công", f"Đã thêm tài khoản cho {username}!", parent=popup)
                 popup.destroy()
