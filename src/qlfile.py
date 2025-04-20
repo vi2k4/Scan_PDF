@@ -6,14 +6,7 @@ from datetime import datetime
 from PIL import Image, ImageTk
 import webbrowser
 import mysql.connector
-import sys
 import user_data
-
-# ---------- THIẾT LẬP THÔNG SỐ ĐĂNG NHẬP ----------
-if len(sys.argv) > 1:
-    user_id = int(sys.argv[1])
-else:
-    user_id = None
 
 # ---------- KẾT NỐI DATABASE ----------
 def get_connection():
@@ -21,7 +14,7 @@ def get_connection():
         db = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="",
+            password="",  # Thay bằng mật khẩu MySQL nếu có
             database="my_scanner_db"
         )
         print("DEBUG: Kết nối cơ sở dữ liệu thành công")
@@ -31,29 +24,65 @@ def get_connection():
         messagebox.showerror("Lỗi kết nối", f"Không thể kết nối cơ sở dữ liệu: {e}")
         return None
 
+# ---------- TẢI DỮ LIỆU FILE ----------
 def load_file(root, top_frame, user_id):
-    print(f"DEBUG: Tải giao diện Quản lý file cho user_id = {user_data.get_current_user()}")
+    print(f"DEBUG: user_id được truyền vào = {user_id}")
+    print(f"DEBUG: user_data.get_current_user() = {user_data.get_current_user()}")
+    
+    # Sử dụng user_id được truyền vào nếu có, nếu không thì lấy từ user_data
+    effective_user_id = user_id if user_id is not None else user_data.get_current_user()
+    print(f"DEBUG: effective_user_id = {effective_user_id}")
 
     if not top_frame:
         print("LỖI: top_frame = None, không thể hiển thị giao diện file")
         return
 
     for widget in root.winfo_children():
-        if widget not in [top_frame]:  # Giữ lại top_frame
-            widget.pack_forget()       # Ẩn thay vì xóa để dễ hiển thị lại
+        if widget not in [top_frame]:
+            widget.pack_forget()
 
-    file_manager = FileManager(root)  # Chỉ truyền root vào
-    file_manager.load_files()
+    query = """
+        SELECT * FROM documents
+        WHERE user_id = %s AND status = %s
+        ORDER BY created_at DESC
+    """
+    mode_status = "normal"
 
+    try:
+        db = get_connection()
+        if db is None:
+            return
 
+        cursor = db.cursor(dictionary=True)
+        print(f"DEBUG: Truy vấn SQL: {query % (effective_user_id, mode_status)}")
+        cursor.execute(query, (effective_user_id, mode_status))
+        rows = cursor.fetchall()
+        print(f"DEBUG: Số bản ghi: {len(rows)}")
+        print(f"DEBUG: Dữ liệu lấy về: {rows}")
 
+        # Luôn khởi tạo FileManager, ngay cả khi không có dữ liệu
+        file_manager = FileManager(root)
+        file_manager.load_files(rows)
+
+        # Hiển thị thông báo nếu không có dữ liệu
+        if not rows:
+            print("DEBUG: Không có dữ liệu để hiển thị.")
+            messagebox.showinfo("Thông báo", "Không có dữ liệu để hiển thị.")
+
+        cursor.close()
+        db.close()
+    except Exception as e:
+        print(f"ERROR: Lỗi khi tải dữ liệu: {e}")
+        messagebox.showerror("Lỗi", f"Không thể tải dữ liệu: {e}")
+
+# ---------- CLASS QUẢN LÝ FILE ----------
 class FileManager:
     def __init__(self, root):
         self.root = root
         self.current_mode = "pdf"
         self.selected_file_id = None
         self.selected_widgets = {}
-        self.build_ui()  # Gọi phương thức build_ui() để tạo giao diện
+        self.build_ui()
         self.update_header_style()
 
     def build_ui(self):
@@ -84,7 +113,6 @@ class FileManager:
                                         bg="red", fg="white", command=self.delete_all_files)
         self.delete_all_btn.pack(side=tk.RIGHT)
 
-        # Tạo frame file mới tại đây thay vì truyền từ ngoài
         file_frame = tk.Frame(self.root, padx=20, pady=20)
         file_frame.pack(fill=tk.BOTH, expand=True)
 
@@ -99,65 +127,60 @@ class FileManager:
         self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
+    def refresh_files(self):
+        """Tải lại danh sách file từ cơ sở dữ liệu dựa trên current_mode."""
+        query = """
+            SELECT * FROM documents
+            WHERE user_id = %s AND status = %s
+            ORDER BY created_at DESC
+        """
+        mode_status = "normal" if self.current_mode == "pdf" else "pinned"
+        try:
+            db = get_connection()
+            if db is None:
+                return
+            cursor = db.cursor(dictionary=True)
+            cursor.execute(query, (user_data.get_current_user(), mode_status))
+            rows = cursor.fetchall()
+            print(f"DEBUG: Tải lại file - Số bản ghi: {len(rows)}")
+            print(f"DEBUG: Dữ liệu tải lại: {rows}")
+            self.load_files(rows)
+            if not rows:
+                print(f"DEBUG: Không có dữ liệu để hiển thị trong tab {'File' if self.current_mode == 'pdf' else 'Ghim'}.")
+                messagebox.showinfo("Thông báo", "Không có dữ liệu để hiển thị.")
+            cursor.close()
+            db.close()
+        except Exception as e:
+            print(f"ERROR: Lỗi khi tải lại file: {e}")
+            messagebox.showerror("Lỗi", f"Không thể tải lại danh sách file: {e}")
 
     def switch_mode(self, mode):
         if self.current_mode != mode:
             self.current_mode = mode
             self.update_header_style()
-            self.load_files()
+            self.refresh_files()  # Tải lại file khi chuyển mode
 
     def update_header_style(self):
         target = self.lbl_file if self.current_mode == "pdf" else self.lbl_pin
         self.root.after(10, lambda: self.underline.place_configure(
             x=target.winfo_x(), width=target.winfo_width()))
 
-    def load_files(self):
+    def load_files(self, rows=None):
+        if rows is None:
+            rows = []
+
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
-        try:
-            db = get_connection()
-            if db is None:
-                return
-            cursor = db.cursor(dictionary=True)
-
-            query = """
-                SELECT * FROM documents
-                WHERE user_id = %s AND status = %s
-                ORDER BY created_at DESC
-            """
-            mode_status = "pinned" if self.current_mode == "pdf_ghim" else "normal"
-            cursor.execute(query, (user_data.get_current_user(), mode_status))
-            rows = cursor.fetchall()
-
-            print(f"DEBUG: Dữ liệu tải về: {rows}")  # In ra dữ liệu để kiểm tra
-
-            if not rows:
-                print("DEBUG: Không có dữ liệu nào được tải về.")
-                messagebox.showinfo("Thông báo", "Không có dữ liệu để hiển thị.")
-
-            grouped = {}
-            for row in rows:
-                date_key = row["created_at"].strftime("%m/%Y")
-                grouped.setdefault(date_key, []).append(row)
-
-            for month_year, items in grouped.items():
-                section = tk.Label(self.scrollable_frame, text=month_year, font=("Arial", 14, "bold"), bg="white")
-                section.pack(anchor='w', padx=15, pady=(10, 0))
-                for row in items:
-                    self.create_file_entry(row)
-
-            cursor.close()
-            db.close()
-        except Exception as e:
-            messagebox.showerror("Lỗi", f"Không thể tải dữ liệu: {e}")
-            print(f"ERROR: Không thể tải dữ liệu: {e}")
+        print(f"DEBUG: Đang tải {len(rows)} file vào giao diện")
+        for doc in rows:
+            self.create_file_entry(doc)
 
     def create_file_entry(self, doc):
         bg_normal = "#4CE5F2"
         bg_selected = "#4CC2F1"
 
-        frame = tk.Frame(self.scrollable_frame, bg=bg_normal, height=60, width=850, bd=1, relief="solid")
+        frame = tk.Frame(self.scrollable_frame, bg=bg_normal, height=60, width=800, bd=1, relief="solid")
         frame.pack(fill=tk.X, padx=20, pady=5)
         frame.pack_propagate(False)
 
@@ -167,12 +190,14 @@ class FileManager:
         try:
             icon_img = Image.open("img/pdf.png").resize((40, 40))
             pdf_icon = ImageTk.PhotoImage(icon_img)
-        except:
+        except Exception as e:
+            print(f"DEBUG: Lỗi tải icon: {e}")
             pdf_icon = None
 
         icon_lbl = tk.Label(icon_frame, image=pdf_icon if pdf_icon else None,
                             text="PDF" if not pdf_icon else "", bg=bg_normal)
-        if pdf_icon: icon_lbl.image = pdf_icon
+        if pdf_icon:
+            icon_lbl.image = pdf_icon
         icon_lbl.pack()
 
         content_frame = tk.Frame(frame, bg=bg_normal)
@@ -204,6 +229,8 @@ class FileManager:
             w.bind("<Button-1>", lambda e, doc_id=doc["doc_id"]: self.select_file(doc_id, frame, *widgets))
             w.bind("<Double-1>", lambda e, path=doc["converted_file_path"]: self.open_file(path))
 
+        print(f"DEBUG: Đã tạo widget cho file: {doc['title']}")
+
     def select_file(self, doc_id, frame, *widgets):
         self.reset_selection()
         self.selected_file_id = doc_id
@@ -233,22 +260,74 @@ class FileManager:
             db = get_connection()
             if db is None:
                 return
-            cursor = db.cursor()
-            cursor.execute("UPDATE documents SET status = %s WHERE doc_id = %s", (new_status, doc_id))
-            db.commit()
+            cursor = db.cursor(dictionary=True)
+
+            if new_status == "pinned":
+                # Lấy thông tin file gốc
+                cursor.execute("SELECT * FROM documents WHERE doc_id = %s AND status = 'normal'", (doc_id,))
+                file_info = cursor.fetchone()
+                if not file_info:
+                    messagebox.showerror("Lỗi", "Không tìm thấy file để ghim.")
+                    cursor.close()
+                    db.close()
+                    return
+
+                # Tạo bản ghi mới với status = 'pinned'
+                insert_query = """
+                    INSERT INTO documents (user_id, title, original_file_path, converted_file_path, status, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                cursor.execute(insert_query, (
+                    file_info["user_id"],
+                    file_info["title"],
+                    file_info["original_file_path"],
+                    file_info["converted_file_path"],
+                    "pinned",
+                    file_info["created_at"]
+                ))
+                db.commit()
+                print(f"DEBUG: Đã tạo bản ghi pinned cho file doc_id = {doc_id}, title = {file_info['title']}")
+
+            elif new_status == "normal":
+                # Xóa bản ghi pinned
+                cursor.execute("DELETE FROM documents WHERE doc_id = %s AND status = 'pinned'", (doc_id,))
+                db.commit()
+                print(f"DEBUG: Đã xóa bản ghi pinned với doc_id = {doc_id}")
+
             cursor.close()
             db.close()
-            self.load_files()
-            messagebox.showinfo("Thành công", f"Đã cập nhật trạng thái file {new_status}.")
+            self.refresh_files()  # Tải lại file sau khi ghim/bỏ ghim
+            messagebox.showinfo("Thành công", f"Đã {'ghim' if new_status == 'pinned' else 'bỏ ghim'} file.")
         except Exception as e:
+            print(f"ERROR: Lỗi khi cập nhật trạng thái ghim: {e}")
             messagebox.showerror("Lỗi", f"Không thể cập nhật trạng thái: {e}")
 
     def delete_file(self):
         if not self.selected_file_id:
             messagebox.showwarning("Chưa chọn file", "Hãy chọn một file để xóa.")
             return
-        # Xử lý xóa file từ cơ sở dữ liệu và hệ thống file
+
+        # Kiểm tra thông tin file trước khi xóa
         try:
+            db = get_connection()
+            if db is None:
+                return
+            cursor = db.cursor(dictionary=True)
+            cursor.execute("SELECT title FROM documents WHERE doc_id = %s", (self.selected_file_id,))
+            file_info = cursor.fetchone()
+            cursor.close()
+            db.close()
+
+            if file_info:
+                confirm = messagebox.askyesno(
+                    "Xác nhận xóa",
+                    f"Bạn có chắc muốn xóa file '{file_info['title']}' không?"
+                )
+                if not confirm:
+                    print("DEBUG: Người dùng hủy xóa file")
+                    return
+
+            # Tiến hành xóa
             db = get_connection()
             if db is None:
                 return
@@ -257,35 +336,62 @@ class FileManager:
             db.commit()
             cursor.close()
             db.close()
-            self.load_files()
+            print(f"DEBUG: Đã xóa file với doc_id = {self.selected_file_id}")
+            self.refresh_files()  # Tải lại file sau khi xóa
             messagebox.showinfo("Thành công", "Đã xóa file.")
         except Exception as e:
+            print(f"ERROR: Lỗi khi xóa file: {e}")
             messagebox.showerror("Lỗi", f"Không thể xóa file: {e}")
 
     def delete_all_files(self):
-        response = messagebox.askyesno("Xóa tất cả", "Bạn có chắc chắn muốn xóa tất cả các file không?")
-        if response:
-            try:
-                db = get_connection()
-                if db is None:
-                    return
-                cursor = db.cursor()
-                cursor.execute("DELETE FROM documents WHERE user_id = %s", (user_data.get_current_user(),))
-                db.commit()
-                cursor.close()
-                db.close()
-                self.load_files()
-                messagebox.showinfo("Thành công", "Đã xóa tất cả các file.")
-            except Exception as e:
-                messagebox.showerror("Lỗi", f"Không thể xóa các file: {e}")
+        # Kiểm tra số lượng file trước khi xóa
+        try:
+            db = get_connection()
+            if db is None:
+                return
+            cursor = db.cursor()
+            cursor.execute("SELECT COUNT(*) as count FROM documents WHERE user_id = %s AND status = %s",
+                           (user_data.get_current_user(), "normal" if self.current_mode == "pdf" else "pinned"))
+            count = cursor.fetchone()[0]
+            cursor.close()
+            db.close()
+
+            if count == 0:
+                messagebox.showinfo("Thông báo", "Không có file nào để xóa.")
+                return
+
+            confirm = messagebox.askyesno(
+                "Xác nhận xóa tất cả",
+                f"Bạn có chắc muốn xóa {count} file trong chế độ {'File' if self.current_mode == 'pdf' else 'Ghim'} không?"
+            )
+            if not confirm:
+                print("DEBUG: Người dùng hủy xóa tất cả file")
+                return
+
+            # Tiến hành xóa tất cả
+            db = get_connection()
+            if db is None:
+                return
+            cursor = db.cursor()
+            cursor.execute("DELETE FROM documents WHERE user_id = %s AND status = %s",
+                           (user_data.get_current_user(), "normal" if self.current_mode == "pdf" else "pinned"))
+            db.commit()
+            cursor.close()
+            db.close()
+            print(f"DEBUG: Đã xóa {count} file")
+            self.refresh_files()  # Tải lại file sau khi xóa
+            messagebox.showinfo("Thành công", "Đã xóa tất cả các file.")
+        except Exception as e:
+            print(f"ERROR: Lỗi khi xóa tất cả file: {e}")
+            messagebox.showerror("Lỗi", f"Không thể xóa tất cả file: {e}")
+
 if __name__ == "__main__":
-    import tkinter as tk
-    import user_data  # giả sử file này có sẵn hoặc bạn tạo với get_current_user() trả về user_id = 1
-
+    # Mock user_data để test
     def get_current_user():
-        return 1  # mock user_id để test
+        return 1  # Giả lập user_id = 1
 
-    # Gán user_id từ hàm mock
+    # Gán user_id
+    user_data.get_current_user = get_current_user
     user_id = get_current_user()
 
     # Tạo cửa sổ chính
@@ -293,15 +399,11 @@ if __name__ == "__main__":
     root.title("Quản lý PDF")
     root.geometry("900x700")
 
-    # Tạo khung top như bạn mô tả
+    # Tạo top_frame
     top_frame = tk.Frame(root, height=40, bg="gray")
     top_frame.pack(side=tk.TOP, fill=tk.X)
 
-    # Khởi tạo giao diện quản lý file PDF
-    app = FileManager(root)
-    # app.pack(fill="both", expand=True)
-
-    # Gọi phương thức load files tương ứng
-    app.load_files()
+    # Tải dữ liệu và hiển thị
+    load_file(root, top_frame, user_id)
 
     root.mainloop()
