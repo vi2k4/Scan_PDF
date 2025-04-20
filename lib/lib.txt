@@ -4,3 +4,4 @@ email-validator
 cv2
 PIL
 mysql-connector-python
+matplotlib
