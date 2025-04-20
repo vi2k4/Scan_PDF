@@ -62,7 +62,7 @@ menu = Menu(root, tearoff=0)
 menu.add_command(label="Scan", command=lambda: [change_module_name("SCAN"), scan.load_scan(root, top_frame)])
 menu.add_command(label="Chỉnh sửa", command=lambda: [change_module_name("CHỈNH SỬA"), edit.load_edit(root, top_frame)])
 # menu.add_command(label="Ảnh gần đây", command=lambda: change_module_name("ẢNH GẦN ĐÂY"))
-menu.add_command(label="File", command=lambda: [change_module_name("FILE"), qlfile.load_file(root, top_frame)])  # Đảm bảo load đúng
+menu.add_command(label="File", command=lambda: [change_module_name("FILE"), qlfile.load_file(root, top_frame, user_id )])  # Đảm bảo load đúng
 if (user_model.get_role_user_by_id(user_id) != "admin"):
     menu.add_command(label="Hỗ Trợ", command=lambda: [change_module_name("HỖ TRỢ"), tiket.load_user_support(root,top_frame,user_id)])
 if(user_model.get_role_user_by_id(user_id) == "admin"):

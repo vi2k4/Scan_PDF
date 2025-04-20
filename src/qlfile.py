@@ -5,22 +5,44 @@ from tkinter import messagebox
 from datetime import datetime
 from PIL import Image, ImageTk
 import webbrowser
-def load_file(root, top_frame):
+import mysql.connector
+import sys
+import user_data
 
-    print("DEBUG: Tải giao diện Quản lý File")
-    print(f"Top Frame type: {type(top_frame)}")
+# ---------- THIẾT LẬP THÔNG SỐ ĐĂNG NHẬP ----------
+if len(sys.argv) > 1:
+    user_id = int(sys.argv[1])
+else:
+    user_id = None
+
+# ---------- KẾT NỐI DATABASE ----------
+def get_connection():
+    try:
+        db = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="my_scanner_db"
+        )
+        print("DEBUG: Kết nối cơ sở dữ liệu thành công")
+        return db
+    except Exception as e:
+        print(f"ERROR: Không thể kết nối cơ sở dữ liệu: {e}")
+        messagebox.showerror("Lỗi kết nối", f"Không thể kết nối cơ sở dữ liệu: {e}")
+        return None
+
+def load_file(root, top_frame, user_id):
+    print(f"DEBUG: Tải giao diện Quản lý file cho user_id = {user_data.get_current_user()}")
 
     if not top_frame:
-        print("LỖI: top_frame = None, không thể hiển thị Quản lý File")
+        print("LỖI: top_frame = None, không thể hiển thị giao diện file")
         return
 
-    # Ẩn tất cả các widget ngoài top_frame
     for widget in root.winfo_children():
-        if widget not in [top_frame]:
-            widget.pack_forget()
+        if widget not in [top_frame]:  # Giữ lại top_frame
+            widget.pack_forget()       # Ẩn thay vì xóa để dễ hiển thị lại
 
-    # Gọi lại FileManager để load giao diện quản lý file
-    file_manager = FileManager(root)
+    file_manager = FileManager(root)  # Chỉ truyền root vào
     file_manager.load_files()
 
 
@@ -28,22 +50,15 @@ def load_file(root, top_frame):
 class FileManager:
     def __init__(self, root):
         self.root = root
-        # self.root.title("Quản lý PDF")
-        # self.selected_widgets.clear()  # Thêm dòng này vào đầu
-
         self.current_mode = "pdf"
-        self.selected_file = None
+        self.selected_file_id = None
         self.selected_widgets = {}
-
-        self.build_ui()
+        self.build_ui()  # Gọi phương thức build_ui() để tạo giao diện
         self.update_header_style()
-        # self.load_files()
-   
 
     def build_ui(self):
-        # Header
         self.header = tk.Frame(self.root, bg="#f5f5f5", height=60)
-        self.header.pack(side=tk.TOP, fill=tk.X, padx=0, pady=0)  # Kiểm tra lại padding của header
+        self.header.pack(side=tk.TOP, fill=tk.X)
         self.header.pack_propagate(False)
 
         self.lbl_file = tk.Label(self.header, text="File", font=("Arial", 20, "bold"),
@@ -69,20 +84,21 @@ class FileManager:
                                         bg="red", fg="white", command=self.delete_all_files)
         self.delete_all_btn.pack(side=tk.RIGHT)
 
-        # Scroll area
-        main_frame = tk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)  # Kiểm tra padding cho main_frame
+        # Tạo frame file mới tại đây thay vì truyền từ ngoài
+        file_frame = tk.Frame(self.root, padx=20, pady=20)
+        file_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.canvas = tk.Canvas(main_frame, bg="white")
-        scrollbar = tk.Scrollbar(main_frame, command=self.canvas.yview)
+        self.canvas = tk.Canvas(file_frame, bg="white")
+        scrollbar = tk.Scrollbar(file_frame, command=self.canvas.yview)
         self.scrollable_frame = tk.Frame(self.canvas, bg="white")
 
         self.scrollable_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
         self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
         self.canvas.configure(yscrollcommand=scrollbar.set)
 
-        self.canvas.pack(side="left", fill="both", expand=True, padx=0, pady=0)  # Kiểm tra lại padding cho canvas
+        self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+
 
     def switch_mode(self, mode):
         if self.current_mode != mode:
@@ -96,27 +112,48 @@ class FileManager:
             x=target.winfo_x(), width=target.winfo_width()))
 
     def load_files(self):
-        folder = os.path.abspath(self.current_mode)
-        os.makedirs(folder, exist_ok=True)
-        files = [f for f in os.listdir(folder) if f.endswith(".pdf")]
-        grouped = {}
-
-        for file in files:
-            full_path = os.path.join(folder, file)
-            mod_time = datetime.fromtimestamp(os.path.getmtime(full_path))
-            key = mod_time.strftime("%m/%Y")
-            grouped.setdefault(key, []).append((file, mod_time))
-
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
-        for month_year, file_list in grouped.items():
-            section = tk.Label(self.scrollable_frame, text=month_year, font=("Arial", 14, "bold"), bg="white")
-            section.pack(anchor='w', padx=15, pady=(10, 0))
-            for name, date in file_list:
-                self.create_file_entry(folder, name, date)
+        try:
+            db = get_connection()
+            if db is None:
+                return
+            cursor = db.cursor(dictionary=True)
 
-    def create_file_entry(self, folder, name, date):
+            query = """
+                SELECT * FROM documents
+                WHERE user_id = %s AND status = %s
+                ORDER BY created_at DESC
+            """
+            mode_status = "pinned" if self.current_mode == "pdf_ghim" else "normal"
+            cursor.execute(query, (user_data.get_current_user(), mode_status))
+            rows = cursor.fetchall()
+
+            print(f"DEBUG: Dữ liệu tải về: {rows}")  # In ra dữ liệu để kiểm tra
+
+            if not rows:
+                print("DEBUG: Không có dữ liệu nào được tải về.")
+                messagebox.showinfo("Thông báo", "Không có dữ liệu để hiển thị.")
+
+            grouped = {}
+            for row in rows:
+                date_key = row["created_at"].strftime("%m/%Y")
+                grouped.setdefault(date_key, []).append(row)
+
+            for month_year, items in grouped.items():
+                section = tk.Label(self.scrollable_frame, text=month_year, font=("Arial", 14, "bold"), bg="white")
+                section.pack(anchor='w', padx=15, pady=(10, 0))
+                for row in items:
+                    self.create_file_entry(row)
+
+            cursor.close()
+            db.close()
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể tải dữ liệu: {e}")
+            print(f"ERROR: Không thể tải dữ liệu: {e}")
+
+    def create_file_entry(self, doc):
         bg_normal = "#4CE5F2"
         bg_selected = "#4CC2F1"
 
@@ -141,11 +178,11 @@ class FileManager:
         content_frame = tk.Frame(frame, bg=bg_normal)
         content_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
 
-        lbl_name = tk.Label(content_frame, text=name, font=("Arial", 18, "bold"),
+        lbl_name = tk.Label(content_frame, text=doc["title"], font=("Arial", 18, "bold"),
                             bg=bg_normal, anchor="w", cursor="hand2")
         lbl_name.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        lbl_date = tk.Label(content_frame, text=date.strftime("%d/%m/%Y"),
+        lbl_date = tk.Label(content_frame, text=doc["created_at"].strftime("%d/%m/%Y"),
                             font=("Arial", 14), bg=bg_normal, anchor="w", width=15)
         lbl_date.pack(side=tk.RIGHT)
 
@@ -155,25 +192,21 @@ class FileManager:
         if self.current_mode == "pdf":
             pin_btn = tk.Label(action_frame, text="☆", font=("Arial", 25), bg=bg_normal, cursor="hand2")
             pin_btn.pack(side=tk.LEFT)
-            pin_btn.bind("<Button-1>", lambda e: self.copy_to_pin_folder(name))
+            pin_btn.bind("<Button-1>", lambda e: self.update_pin_status(doc["doc_id"], "pinned"))
         else:
             unpin_btn = tk.Label(action_frame, text="🗙", font=("Arial", 20), bg=bg_normal, cursor="hand2")
             unpin_btn.pack(side=tk.LEFT)
-            unpin_btn.bind("<Button-1>", lambda e: self.unpin_file(name))
+            unpin_btn.bind("<Button-1>", lambda e: self.update_pin_status(doc["doc_id"], "normal"))
 
-        edit_btn = tk.Label(action_frame, text="🖉", font=("Arial", 20), bg=bg_normal, cursor="hand2")
-        edit_btn.pack(side=tk.LEFT)
-        edit_btn.bind("<Button-1>", lambda e: messagebox.showinfo("Chỉnh sửa", f"Chỉnh sửa {name}"))
-
-        widgets = [frame, icon_frame, content_frame, action_frame, icon_lbl, lbl_name, lbl_date, edit_btn]
+        widgets = [frame, icon_frame, content_frame, action_frame, icon_lbl, lbl_name, lbl_date]
 
         for w in widgets:
-            w.bind("<Button-1>", lambda e, path=os.path.join(folder, name): self.select_file(path, frame, icon_lbl, lbl_name, lbl_date, content_frame, action_frame))
-            w.bind("<Double-1>", lambda e, path=os.path.join(folder, name): self.open_file(path))
+            w.bind("<Button-1>", lambda e, doc_id=doc["doc_id"]: self.select_file(doc_id, frame, *widgets))
+            w.bind("<Double-1>", lambda e, path=doc["converted_file_path"]: self.open_file(path))
 
-    def select_file(self, path, frame, *widgets):
+    def select_file(self, doc_id, frame, *widgets):
         self.reset_selection()
-        self.selected_file = path
+        self.selected_file_id = doc_id
         self.selected_widgets = {
             "frame": frame,
             "widgets": widgets
@@ -190,46 +223,85 @@ class FileManager:
             self.selected_widgets.clear()
 
     def open_file(self, path):
-        webbrowser.open(path)
+        if os.path.exists(path):
+            webbrowser.open(path)
+        else:
+            messagebox.showwarning("Không tìm thấy", "Không tìm thấy file tại đường dẫn: " + path)
 
-    def copy_to_pin_folder(self, name):
-        shutil.copy(os.path.join(self.current_mode, name), "pdf_ghim")
-        self.load_files()
-        messagebox.showinfo("Ghim thành công", f"Đã ghim file: {name}")
-
-    def unpin_file(self, name):
-        os.remove(os.path.join("pdf_ghim", name))
-        self.load_files()
-        messagebox.showinfo("Bỏ ghim", f"Đã bỏ ghim file: {name}")
+    def update_pin_status(self, doc_id, new_status):
+        try:
+            db = get_connection()
+            if db is None:
+                return
+            cursor = db.cursor()
+            cursor.execute("UPDATE documents SET status = %s WHERE doc_id = %s", (new_status, doc_id))
+            db.commit()
+            cursor.close()
+            db.close()
+            self.load_files()
+            messagebox.showinfo("Thành công", f"Đã cập nhật trạng thái file {new_status}.")
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể cập nhật trạng thái: {e}")
 
     def delete_file(self):
-        if self.selected_file and os.path.exists(self.selected_file):
-            confirm = messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa file này?\n\n{os.path.basename(self.selected_file)}")
-        if confirm:
-            os.remove(self.selected_file)
+        if not self.selected_file_id:
+            messagebox.showwarning("Chưa chọn file", "Hãy chọn một file để xóa.")
+            return
+        # Xử lý xóa file từ cơ sở dữ liệu và hệ thống file
+        try:
+            db = get_connection()
+            if db is None:
+                return
+            cursor = db.cursor()
+            cursor.execute("DELETE FROM documents WHERE doc_id = %s", (self.selected_file_id,))
+            db.commit()
+            cursor.close()
+            db.close()
             self.load_files()
-            messagebox.showinfo("Đã xóa", f"File đã được xóa: {os.path.basename(self.selected_file)}")
-
+            messagebox.showinfo("Thành công", "Đã xóa file.")
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể xóa file: {e}")
 
     def delete_all_files(self):
-        folder = os.path.abspath(self.current_mode)
-        files = os.listdir(folder)
-        if not files:
-            messagebox.showinfo("Không có file", "Thư mục hiện không có file nào để xóa.")
-            return
-
-        confirm = messagebox.askyesno("Xác nhận", f"Bạn có chắc muốn xóa TẤT CẢ {len(files)} file?")
-        if confirm:
-            for filename in files:
-                os.remove(os.path.join(folder, filename))
-            self.load_files()
-            messagebox.showinfo("Đã xóa", f"Đã xóa tất cả file trong mục: {self.current_mode}")
-
-
+        response = messagebox.askyesno("Xóa tất cả", "Bạn có chắc chắn muốn xóa tất cả các file không?")
+        if response:
+            try:
+                db = get_connection()
+                if db is None:
+                    return
+                cursor = db.cursor()
+                cursor.execute("DELETE FROM documents WHERE user_id = %s", (user_data.get_current_user(),))
+                db.commit()
+                cursor.close()
+                db.close()
+                self.load_files()
+                messagebox.showinfo("Thành công", "Đã xóa tất cả các file.")
+            except Exception as e:
+                messagebox.showerror("Lỗi", f"Không thể xóa các file: {e}")
 if __name__ == "__main__":
+    import tkinter as tk
+    import user_data  # giả sử file này có sẵn hoặc bạn tạo với get_current_user() trả về user_id = 1
+
+    def get_current_user():
+        return 1  # mock user_id để test
+
+    # Gán user_id từ hàm mock
+    user_id = get_current_user()
+
+    # Tạo cửa sổ chính
     root = tk.Tk()
+    root.title("Quản lý PDF")
     root.geometry("900x700")
 
-    root.config(padx=0, pady=0)  # Loại bỏ padding ngoài gốc
+    # Tạo khung top như bạn mô tả
+    top_frame = tk.Frame(root, height=40, bg="gray")
+    top_frame.pack(side=tk.TOP, fill=tk.X)
+
+    # Khởi tạo giao diện quản lý file PDF
     app = FileManager(root)
+    # app.pack(fill="both", expand=True)
+
+    # Gọi phương thức load files tương ứng
+    app.load_files()
+
     root.mainloop()

@@ -322,7 +322,7 @@ def load_settings(root, top_frame, user_id):
     btn_icon.bind("<Button-1>", lambda event: scan.load_scan(root, top_frame))
 
 if __name__ == "__main__":
-    user_id = 12
+    user_id = 1
     root = tk.Tk()
     root.title("Cài đặt")
     root.geometry("900x700")
