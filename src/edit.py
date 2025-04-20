@@ -1,9 +1,17 @@
+import sys
 import tkinter as tk
 from tkinter import ttk, filedialog, colorchooser
 from PIL import Image, ImageTk
 import os
 from reportlab.pdfgen import canvas
 import subprocess
+from db.created_pdf import insert_document
+from datetime import datetime
+
+if len(sys.argv) > 1:
+    user_id = int(sys.argv[1])
+else:
+    user_id = None
 
 def load_edit(root, top_frame):
     for widget in root.winfo_children():
@@ -96,11 +104,24 @@ def search_text(text_area, search_word):
             start_pos = end_pos
 
 def export_text(text_area):
-    file_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF file", "*.pdf"), ("All files", "*.*")])
+    BASE_DIR= os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if not BASE_DIR:
+        return
+    pdf_root= os.path.join(BASE_DIR,"pdf")
+    user_folder = os.path.join(pdf_root,f"user{user_id}")
+    ghim_folder = os.path.join(user_folder,"ghim")
+    os.makedirs(user_folder, exist_ok=True)
+    os.makedirs(ghim_folder, exist_ok=True)
+    file_path = filedialog.asksaveasfilename(initialdir=user_folder,defaultextension=".pdf", filetypes=[("PDF file", "*.pdf"), ("All files", "*.*")])
     if file_path:
         c = canvas.Canvas(file_path)
         c.drawString(50, 750, text_area.get("1.0", tk.END))
         c.save()
+
+        print("PDF saved to: ",file_path)
+        
+        tilte = os.path.basename(file_path)
+        insert_document(user_id,tilte,file_path,"Completed",datetime.now())
 
 def go_back(root, top_frame):
     for widget in root.winfo_children():
