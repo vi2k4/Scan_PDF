@@ -14,7 +14,7 @@ def get_connection():
         db = mysql.connector.connect(
             host="localhost",
             user="root",
-            password="",  # Thay bằng mật khẩu MySQL nếu có
+            password="",
             database="my_scanner_db"
         )
         print("DEBUG: Kết nối cơ sở dữ liệu thành công")
@@ -102,13 +102,12 @@ class FileManager:
         self.underline = tk.Frame(self.header, bg="#00BFFF", height=3, width=100)
         self.underline.place(x=0, rely=1.0, anchor='sw')
 
-        # Thêm thanh tìm kiếm và nút tìm kiếm
         self.search_frame = tk.Frame(self.header, bg="#f5f5f5")
         self.search_frame.pack(side=tk.RIGHT, padx=10)
 
         self.search_entry = tk.Entry(self.search_frame, width=20, font=("Arial", 12))
         self.search_entry.pack(side=tk.LEFT, padx=(0, 5))
-        self.search_entry.bind("<KeyRelease>", self.search_files)  # Tìm kiếm tự động khi nhập/xóa
+        self.search_entry.bind("<KeyRelease>", self.search_files)
 
         self.search_btn = tk.Button(self.search_frame, text="Tìm", font=("Arial", 12),
                                     bg="#4CAF50", fg="white", command=self.search_files)
@@ -137,12 +136,10 @@ class FileManager:
         scrollbar.pack(side="right", fill="y")
 
     def search_files(self, event=None):
-        """Tìm kiếm file theo từ khóa trong tab hiện tại."""
         keyword = self.search_entry.get().strip()
         print(f"DEBUG: Tìm kiếm với từ khóa: '{keyword}' trong tab {self.current_mode}")
 
         if not keyword:
-            # Nếu từ khóa trống, hiển thị lại toàn bộ danh sách
             self.refresh_files()
             return
 
@@ -174,7 +171,6 @@ class FileManager:
             messagebox.showerror("Lỗi", f"Không thể tìm kiếm file: {e}")
 
     def refresh_files(self):
-        """Tải lại danh sách file từ cơ sở dữ liệu dựa trên current_mode."""
         query = """
             SELECT * FROM documents
             WHERE user_id = %s AND status = %s
@@ -204,8 +200,8 @@ class FileManager:
         if self.current_mode != mode:
             self.current_mode = mode
             self.update_header_style()
-            self.search_entry.delete(0, tk.END)  # Xóa từ khóa tìm kiếm khi chuyển tab
-            self.refresh_files()  # Tải lại file khi chuyển mode
+            self.search_entry.delete(0, tk.END)
+            self.refresh_files()
 
     def update_header_style(self):
         target = self.lbl_file if self.current_mode == "pdf" else self.lbl_pin
@@ -310,6 +306,7 @@ class FileManager:
             cursor = db.cursor(dictionary=True)
 
             if new_status == "pinned":
+                # Lấy thông tin file gốc
                 cursor.execute("SELECT * FROM documents WHERE doc_id = %s AND status = 'normal'", (doc_id,))
                 file_info = cursor.fetchone()
                 if not file_info:
@@ -318,6 +315,22 @@ class FileManager:
                     db.close()
                     return
 
+                # Kiểm tra xem file đã được ghim chưa
+                cursor.execute(
+                    """
+                    SELECT * FROM documents 
+                    WHERE user_id = %s AND title = %s AND status = 'pinned'
+                    """,
+                    (file_info["user_id"], file_info["title"])
+                )
+                pinned_file = cursor.fetchone()
+                if pinned_file:
+                    messagebox.showinfo("Thông báo", f"File '{file_info['title']}' đã được ghim rồi.")
+                    cursor.close()
+                    db.close()
+                    return
+
+                # Nếu chưa ghim, tạo bản ghi mới với status = 'pinned'
                 insert_query = """
                     INSERT INTO documents (user_id, title, original_file_path, converted_file_path, status, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s)
