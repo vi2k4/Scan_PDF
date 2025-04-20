@@ -9,10 +9,9 @@ import edit
 import user_data
 import tiket
 import ticket_repliers
-import statistic
 import qlfile  # Import qlfile module
 from db import user_model
-
+import statistic
 # Lấy user_id từ sys.argv
 if len(sys.argv) > 1:
     user_id = sys.argv[1]
@@ -66,14 +65,16 @@ print(f"DEBUG: Vai trò người dùng: {user_model.get_role_user_by_id(user_id)
 menu = Menu(root, tearoff=0)
 menu.add_command(label="Scan", command=lambda: [change_module_name("SCAN"), scan.load_scan(root, top_frame)])
 menu.add_command(label="Chỉnh sửa", command=lambda: [change_module_name("CHỈNH SỬA"), edit.load_edit(root, top_frame)])
-# menu.add_command(label="Ảnh gần đây", command=lambda: change_module_name("ẢNH GẦN ĐÂY"))
-menu.add_command(label="File", command=lambda: [change_module_name("FILE"), qlfile.load_file(root, top_frame)])  # Đảm bảo load đúng
+menu.add_command(label="File", command=lambda: [
+    change_module_name("FILE"),
+    print(f"DEBUG: Gọi qlfile.load_file với user_id = {user_id}"),
+    qlfile.load_file(root, top_frame, user_id)
+])
 menu.add_command(label="Thống kê", command=lambda: [change_module_name("THỐNG KÊ"), statistic.load_statistic(root, top_frame)])
-
-if (user_model.get_role_user_by_id(user_id) != "admin"):
-    menu.add_command(label="Hỗ Trợ", command=lambda: [change_module_name("HỖ TRỢ"), tiket.load_user_support(root,top_frame,user_id)])
-if(user_model.get_role_user_by_id(user_id) == "admin"):
-    menu.add_command(label="Quản lý hỗ trợ", command=lambda: [change_module_name("QUẢN LÝ HỖ TRỢ"), ticket_repliers.load_admin_support(root,top_frame)])
+if user_model.get_role_user_by_id(user_id) != "admin":
+    menu.add_command(label="Hỗ Trợ", command=lambda: [change_module_name("HỖ TRỢ"), tiket.load_user_support(root, top_frame, user_id)])
+if user_model.get_role_user_by_id(user_id) == "admin":
+    menu.add_command(label="Quản lý hỗ trợ", command=lambda: [change_module_name("QUẢN LÝ HỖ TRỢ"), ticket_repliers.load_admin_support(root, top_frame)])
     menu.add_command(label="Quản lý tài khoản", command=lambda: [change_module_name("QUẢN LÝ TÀI KHOẢN"), user_controller.load_user_management(root, top_frame)])
 menu.add_command(label="Cài đặt", command=lambda: [change_module_name("CÀI ĐẶT"), setting.load_settings(root, top_frame, user_id)])
 menu.add_command(label="Đăng xuất", command=lambda: backToLogin())

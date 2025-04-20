@@ -121,7 +121,7 @@ def export_text(text_area):
         print("PDF saved to: ",file_path)
         
         tilte = os.path.basename(file_path)
-        insert_document(user_id,tilte,file_path,"Completed",datetime.now())
+        insert_document(user_id,tilte,file_path,"normal",datetime.now())
 
 def go_back(root, top_frame):
     for widget in root.winfo_children():

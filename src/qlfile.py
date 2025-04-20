@@ -29,7 +29,6 @@ def load_file(root, top_frame, user_id):
     print(f"DEBUG: user_id được truyền vào = {user_id}")
     print(f"DEBUG: user_data.get_current_user() = {user_data.get_current_user()}")
     
-    # Sử dụng user_id được truyền vào nếu có, nếu không thì lấy từ user_data
     effective_user_id = user_id if user_id is not None else user_data.get_current_user()
     print(f"DEBUG: effective_user_id = {effective_user_id}")
 
@@ -60,11 +59,9 @@ def load_file(root, top_frame, user_id):
         print(f"DEBUG: Số bản ghi: {len(rows)}")
         print(f"DEBUG: Dữ liệu lấy về: {rows}")
 
-        # Luôn khởi tạo FileManager, ngay cả khi không có dữ liệu
         file_manager = FileManager(root)
         file_manager.load_files(rows)
 
-        # Hiển thị thông báo nếu không có dữ liệu
         if not rows:
             print("DEBUG: Không có dữ liệu để hiển thị.")
             messagebox.showinfo("Thông báo", "Không có dữ liệu để hiển thị.")
@@ -105,6 +102,18 @@ class FileManager:
         self.underline = tk.Frame(self.header, bg="#00BFFF", height=3, width=100)
         self.underline.place(x=0, rely=1.0, anchor='sw')
 
+        # Thêm thanh tìm kiếm và nút tìm kiếm
+        self.search_frame = tk.Frame(self.header, bg="#f5f5f5")
+        self.search_frame.pack(side=tk.RIGHT, padx=10)
+
+        self.search_entry = tk.Entry(self.search_frame, width=20, font=("Arial", 12))
+        self.search_entry.pack(side=tk.LEFT, padx=(0, 5))
+        self.search_entry.bind("<KeyRelease>", self.search_files)  # Tìm kiếm tự động khi nhập/xóa
+
+        self.search_btn = tk.Button(self.search_frame, text="Tìm", font=("Arial", 12),
+                                    bg="#4CAF50", fg="white", command=self.search_files)
+        self.search_btn.pack(side=tk.LEFT)
+
         self.delete_btn = tk.Button(self.header, text="Xóa", font=("Arial", 12, "bold"),
                                     bg="red", fg="white", command=self.delete_file)
         self.delete_btn.pack(side=tk.RIGHT, padx=10)
@@ -126,6 +135,43 @@ class FileManager:
 
         self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+
+    def search_files(self, event=None):
+        """Tìm kiếm file theo từ khóa trong tab hiện tại."""
+        keyword = self.search_entry.get().strip()
+        print(f"DEBUG: Tìm kiếm với từ khóa: '{keyword}' trong tab {self.current_mode}")
+
+        if not keyword:
+            # Nếu từ khóa trống, hiển thị lại toàn bộ danh sách
+            self.refresh_files()
+            return
+
+        query = """
+            SELECT * FROM documents
+            WHERE user_id = %s AND status = %s AND title LIKE %s
+            ORDER BY created_at DESC
+        """
+        mode_status = "normal" if self.current_mode == "pdf" else "pinned"
+        search_pattern = f"%{keyword}%"
+
+        try:
+            db = get_connection()
+            if db is None:
+                return
+            cursor = db.cursor(dictionary=True)
+            cursor.execute(query, (user_data.get_current_user(), mode_status, search_pattern))
+            rows = cursor.fetchall()
+            print(f"DEBUG: Tìm kiếm - Số bản ghi: {len(rows)}")
+            print(f"DEBUG: Dữ liệu tìm kiếm: {rows}")
+            self.load_files(rows)
+            if not rows:
+                print(f"DEBUG: Không tìm thấy file nào với từ khóa '{keyword}' trong tab {'File' if self.current_mode == 'pdf' else 'Ghim'}.")
+                messagebox.showinfo("Thông báo", f"Không tìm thấy file nào với từ khóa '{keyword}'.")
+            cursor.close()
+            db.close()
+        except Exception as e:
+            print(f"ERROR: Lỗi khi tìm kiếm file: {e}")
+            messagebox.showerror("Lỗi", f"Không thể tìm kiếm file: {e}")
 
     def refresh_files(self):
         """Tải lại danh sách file từ cơ sở dữ liệu dựa trên current_mode."""
@@ -158,6 +204,7 @@ class FileManager:
         if self.current_mode != mode:
             self.current_mode = mode
             self.update_header_style()
+            self.search_entry.delete(0, tk.END)  # Xóa từ khóa tìm kiếm khi chuyển tab
             self.refresh_files()  # Tải lại file khi chuyển mode
 
     def update_header_style(self):
@@ -263,7 +310,6 @@ class FileManager:
             cursor = db.cursor(dictionary=True)
 
             if new_status == "pinned":
-                # Lấy thông tin file gốc
                 cursor.execute("SELECT * FROM documents WHERE doc_id = %s AND status = 'normal'", (doc_id,))
                 file_info = cursor.fetchone()
                 if not file_info:
@@ -272,7 +318,6 @@ class FileManager:
                     db.close()
                     return
 
-                # Tạo bản ghi mới với status = 'pinned'
                 insert_query = """
                     INSERT INTO documents (user_id, title, original_file_path, converted_file_path, status, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s)
@@ -289,14 +334,13 @@ class FileManager:
                 print(f"DEBUG: Đã tạo bản ghi pinned cho file doc_id = {doc_id}, title = {file_info['title']}")
 
             elif new_status == "normal":
-                # Xóa bản ghi pinned
                 cursor.execute("DELETE FROM documents WHERE doc_id = %s AND status = 'pinned'", (doc_id,))
                 db.commit()
                 print(f"DEBUG: Đã xóa bản ghi pinned với doc_id = {doc_id}")
 
             cursor.close()
             db.close()
-            self.refresh_files()  # Tải lại file sau khi ghim/bỏ ghim
+            self.refresh_files()
             messagebox.showinfo("Thành công", f"Đã {'ghim' if new_status == 'pinned' else 'bỏ ghim'} file.")
         except Exception as e:
             print(f"ERROR: Lỗi khi cập nhật trạng thái ghim: {e}")
@@ -307,7 +351,6 @@ class FileManager:
             messagebox.showwarning("Chưa chọn file", "Hãy chọn một file để xóa.")
             return
 
-        # Kiểm tra thông tin file trước khi xóa
         try:
             db = get_connection()
             if db is None:
@@ -327,7 +370,6 @@ class FileManager:
                     print("DEBUG: Người dùng hủy xóa file")
                     return
 
-            # Tiến hành xóa
             db = get_connection()
             if db is None:
                 return
@@ -337,14 +379,13 @@ class FileManager:
             cursor.close()
             db.close()
             print(f"DEBUG: Đã xóa file với doc_id = {self.selected_file_id}")
-            self.refresh_files()  # Tải lại file sau khi xóa
+            self.refresh_files()
             messagebox.showinfo("Thành công", "Đã xóa file.")
         except Exception as e:
             print(f"ERROR: Lỗi khi xóa file: {e}")
             messagebox.showerror("Lỗi", f"Không thể xóa file: {e}")
 
     def delete_all_files(self):
-        # Kiểm tra số lượng file trước khi xóa
         try:
             db = get_connection()
             if db is None:
@@ -368,7 +409,6 @@ class FileManager:
                 print("DEBUG: Người dùng hủy xóa tất cả file")
                 return
 
-            # Tiến hành xóa tất cả
             db = get_connection()
             if db is None:
                 return
@@ -379,31 +419,26 @@ class FileManager:
             cursor.close()
             db.close()
             print(f"DEBUG: Đã xóa {count} file")
-            self.refresh_files()  # Tải lại file sau khi xóa
+            self.refresh_files()
             messagebox.showinfo("Thành công", "Đã xóa tất cả các file.")
         except Exception as e:
             print(f"ERROR: Lỗi khi xóa tất cả file: {e}")
             messagebox.showerror("Lỗi", f"Không thể xóa tất cả file: {e}")
 
 if __name__ == "__main__":
-    # Mock user_data để test
     def get_current_user():
-        return 1  # Giả lập user_id = 1
+        return 1
 
-    # Gán user_id
     user_data.get_current_user = get_current_user
     user_id = get_current_user()
 
-    # Tạo cửa sổ chính
     root = tk.Tk()
     root.title("Quản lý PDF")
     root.geometry("900x700")
 
-    # Tạo top_frame
     top_frame = tk.Frame(root, height=40, bg="gray")
     top_frame.pack(side=tk.TOP, fill=tk.X)
 
-    # Tải dữ liệu và hiển thị
     load_file(root, top_frame, user_id)
 
     root.mainloop()
