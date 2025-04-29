@@ -7,6 +7,7 @@ from reportlab.pdfgen import canvas
 import subprocess
 from db.created_pdf import insert_document
 from datetime import datetime
+import scan
 
 if len(sys.argv) > 1:
     user_id = int(sys.argv[1])
@@ -17,18 +18,25 @@ def load_edit(root, top_frame):
     for widget in root.winfo_children():
         if widget not in [top_frame]:
             widget.pack_forget()
-    
-    # Camera icon
-    image_path = os.path.join(os.path.dirname(__file__), "..", "img", "camera.png")
-    camera_icon = ImageTk.PhotoImage(Image.open(image_path).resize((100, 80)))
 
     # Tạo Frame chính
     edit_frame = tk.Frame(root, bg="white")
     edit_frame.pack(fill=tk.BOTH, expand=True)
 
-    # Thanh chức năng
+   # Thanh chức năng
     toolbar = tk.Frame(edit_frame, bg="#f0efed", height=30)
     toolbar.pack(fill=tk.X)
+
+    new_scan = tk.Button(toolbar, text="Quét mới", bg="blue", fg="white", command=lambda:scan.load_scan(root,top_frame))
+    new_scan.pack(fill=tk.Y, side=tk.LEFT)
+    open_file = tk.Button(toolbar, text="Mở file", bg="blue", fg="white")
+    open_file.pack(fill=tk.Y, side=tk.LEFT)
+    save_file = tk.Button(toolbar, text="Lưu file", bg="blue", fg="white")
+    save_file.pack(fill=tk.Y, side=tk.LEFT)
+    pdf_export = tk.Button(toolbar, text="Xuất PDF", bg="blue", fg="white", command=lambda:export_text(text_area))
+    pdf_export.pack(fill=tk.Y, side=tk.LEFT)
+    preview_file = tk.Button(toolbar, text="Xem trước", bg="blue", fg="white")
+    preview_file.pack(fill=tk.Y, side=tk.LEFT)
 
     # Phân trang
     pagebar = tk.Frame(edit_frame, bg="#070e75", width=120)
@@ -38,57 +46,75 @@ def load_edit(root, top_frame):
     sidebar = tk.Frame(edit_frame, width=180, bg="#f0efed")
     sidebar.pack(fill=tk.Y, side=tk.RIGHT)
 
-    # Vùng nhập văn bản
-    text_area = tk.Text(edit_frame, wrap=tk.WORD, font=("Times New Roman", 14))
-    text_area.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    # Công cụ chỉnh sửa
+    edit_tool = tk.Frame(sidebar, bg="white")
+    edit_tool.pack(fill=tk.Y, expand=False)
+    edit_title = tk.Label(edit_tool, text="Công cụ chỉnh sửa", bg="white", font=("Arial", 16, "bold") )
+    edit_title.pack(pady=5)
 
-    # Dòng chữ gợi ý
-    placeholder_label = tk.Label(text_area, text="Chỗ này chứa nội dung ảnh đã chuyển qua PDF", 
-                                 font=("Times New Roman", 20), fg="gray", bg="white")
-    placeholder_label.place(relx=0.5, rely=0.5, anchor="center")
+    # Tuỳ chọn kiểu
+    typeface_frame = tk.Frame(edit_tool, bg="white")
+    typeface_frame.pack(fill=tk.X)
+    bold_button = tk.Button(typeface_frame, text= "B", bg="white", font=("Arial",14,"bold"), bd=0, highlightthickness=0)
+    bold_button.pack(fill=tk.Y, side=tk.LEFT)
 
     # Tuỳ chỉnh font
+    tk.Label(edit_tool, text="Phông chữ", bg="white").pack()
     font_var = tk.StringVar(value="Times New Roman")
-    font_dropdown = ttk.Combobox(sidebar, textvariable=font_var, values=["Arial", "Times New Roman", "Courier New"])
+    font_dropdown = ttk.Combobox(edit_tool, textvariable=font_var, values=["Arial", "Times New Roman", "Courier New"])
     font_dropdown.pack()
     font_dropdown.bind("<<ComboboxSelected>>", lambda event: text_area.config(font=(font_var.get(), int(size_var.get()))))
 
     # Tuỳ chỉnh kích thước
-    tk.Label(sidebar, text="Size", bg="#D3D3D3").pack()
+    tk.Label(edit_tool, text="Cỡ chữ", bg="white").pack()
     size_var = tk.IntVar(value=14)
-    size_dropdown = ttk.Combobox(sidebar, textvariable=size_var, values=[str(i) for i in range(8, 40)])
+    size_dropdown = ttk.Combobox(edit_tool, width=5, textvariable=size_var, values=[str(i) for i in range(8, 40)])
     size_dropdown.pack()
     size_dropdown.bind("<<ComboboxSelected>>", lambda event: text_area.config(font=(font_var.get(), int(size_var.get()))))
 
     # Chọn màu chữ
-    tk.Label(sidebar, text="Màu chữ", bg="#D3D3D3").pack()
+    tk.Label(edit_tool, text="Màu chữ", bg="white").pack()
     def choose_color():
         color_code = colorchooser.askcolor(title="Chọn màu chữ")[1]
         if color_code:
             color_button.config(bg=color_code, activebackground=color_code)
             text_area.config(fg=color_code)
-    color_button = tk.Button(sidebar, text="Chọn màu", command=choose_color, width=5, bg="black", fg="white")
-    color_button.pack(pady=5)
+    color_button = tk.Button(edit_tool, command=choose_color, width=3, bg="red")
+    color_button.pack()
 
+    # Chọn màu nền
+    tk.Label(edit_tool, text="Màu nền", bg="white").pack()
+    def choose_bg_color():
+        color_bg = colorchooser.askcolor(title="Chọn màu nền")[1]
+        if color_bg:
+            color_button_bg.config(bg=color_bg, activebackground=color_bg)
+            text_area.config(bg=color_bg)
+    color_button_bg = tk.Button(edit_tool, command=choose_bg_color, width=3, bg="yellow")
+    color_button_bg.pack()
     # Tìm kiếm
-    tk.Label(sidebar, text="Tìm kiếm", bg="#D3D3D3").pack()
+    tk.Label(sidebar, text="Tìm kiếm",font=("Arial", 16,"bold")).pack()
     search_entry = tk.Entry(sidebar)
     search_entry.pack()
-    search_button = tk.Button(sidebar, text="Tìm kiếm", command=lambda: search_text(text_area, search_entry.get()))
+    search_button = tk.Button(sidebar, text="Tìm", command=lambda: search_text(text_area, search_entry.get()))
     search_button.pack()
 
-    # Xuất file
-    export_button = tk.Button(sidebar, text="Xuất file", command=lambda: export_text(text_area))
-    export_button.pack()
-
     # Nút quay lại menu
-    back_button = tk.Button(sidebar, text="🔙 Quay lại", command=lambda: go_back(root, top_frame))
-    back_button.pack(pady=10)
+    back_button = tk.Button(sidebar, text="Quay lại", command=lambda: go_back(root, top_frame))
+    back_button.pack(fill=tk.X,side=tk.BOTTOM, pady=10)
 
-    # Nút camera góc dưới phải
-    camera_button = tk.Button(sidebar, image=camera_icon)
-    camera_button.image = camera_icon
-    camera_button.pack(side=tk.BOTTOM, pady=10)
+     #Tạo Notebọok 
+    notebook = ttk.Notebook(edit_frame)
+    notebook.pack(fill=tk.BOTH, expand=True)
+
+    tab_edit = tk.Frame(notebook, bg="#f0f0f0")
+    tab_scan = tk.Frame(notebook, bg="#f0f0f0")
+
+    # Vùng nhập văn bản
+    notebook.add(tab_edit, text="Văn bản đã nhận dạng")
+    notebook.add(tab_scan, text="Hình ảnh gốc")
+    text_area = tk.Text(tab_edit, wrap=tk.WORD, font=("Times New Roman", 14), borderwidth=0, relief="flat")
+    text_area.pack(fill=tk.BOTH, expand=True)
+
 
 def search_text(text_area, search_word):
     text_area.tag_remove("search", "1.0", tk.END)
