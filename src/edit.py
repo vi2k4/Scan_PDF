@@ -18,8 +18,6 @@ def load_edit(root, top_frame):
     for widget in root.winfo_children():
         if widget not in [top_frame]:
             widget.pack_forget()
-    #Tạo style  
-    style = ttk.Style()    
     # Tạo Frame chính
     edit_frame = tk.Frame(root, bg="white")
     edit_frame.pack(fill=tk.BOTH, expand=True)
