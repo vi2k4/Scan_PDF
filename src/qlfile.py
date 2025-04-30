@@ -212,8 +212,13 @@ class FileManager:
         if rows is None:
             rows = []
 
+        # Hủy tất cả các widget hiện có trong scrollable_frame
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
+
+        # Xóa self.selected_widgets vì tất cả widget đã bị hủy
+        self.selected_widgets.clear()
+        self.selected_file_id = None  # Đặt lại file đang chọn
 
         print(f"DEBUG: Đang tải {len(rows)} file vào giao diện")
         for doc in rows:
@@ -287,10 +292,15 @@ class FileManager:
 
     def reset_selection(self):
         if self.selected_widgets:
-            self.selected_widgets["frame"].config(bg="#4CE5F2")
-            for w in self.selected_widgets["widgets"]:
-                w.config(bg="#4CE5F2")
+            # Kiểm tra xem frame có còn tồn tại trong hệ thống widget Tkinter không
+            frame = self.selected_widgets.get("frame")
+            if frame and frame.winfo_exists():  # Kiểm tra widget có tồn tại không
+                frame.config(bg="#4CE5F2")
+                for w in self.selected_widgets["widgets"]:
+                    if w.winfo_exists():  # Kiểm tra widget có tồn tại không
+                        w.config(bg="#4CE5F2")
             self.selected_widgets.clear()
+            self.selected_file_id = None  # Đặt lại file đang chọn
 
     def open_file(self, path):
         if os.path.exists(path):
