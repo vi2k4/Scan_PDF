@@ -1,4 +1,6 @@
 import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import tkinter as tk
 from tkinter import ttk, filedialog, colorchooser, messagebox
 from PIL import Image, ImageTk
@@ -14,9 +16,13 @@ if len(sys.argv) > 1:
 else:
     user_id = None
 
-def load_edit(root, top_frame):
+def load_edit(root, top_frame,text):
     for widget in root.winfo_children():
-        if widget not in [top_frame]:
+        # giữ lại top_frame
+        if widget is top_frame:
+            continue
+        # chỉ bỏ pack với widget được quản lý bằng pack()
+        if widget.winfo_manager() == "pack":
             widget.pack_forget()
     # Tạo Frame chính
     edit_frame = tk.Frame(root, bg="white")
@@ -113,7 +119,8 @@ def load_edit(root, top_frame):
     notebook.add(tab_scan, text="Hình ảnh gốc")
     text_area = tk.Text(tab_edit, wrap=tk.WORD, font=("Times New Roman", 14), borderwidth=0, relief="flat")
     text_area.pack(fill=tk.BOTH, expand=True)
-
+    text_area.delete("1.0", "end")  # Xóa nội dung cũ (nếu cần)
+    text_area.insert("1.0", text)   # Chèn nội dung mới từ biến `text`
 
 def search_text(text_area, search_word):
     text_area.tag_remove("search", "1.0", tk.END)

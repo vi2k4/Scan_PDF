@@ -3,13 +3,14 @@ from tkinter import filedialog
 import cv2
 from PIL import Image, ImageTk
 import numpy as np
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
-import edit
-
+from src.edit import load_edit    
 # === 1) Load model predict đã train xong ===
 model = tf.keras.models.load_model("src/crnn_predict_1.keras", compile=False)
 
@@ -171,29 +172,30 @@ def flash_screen():
     flash.after(200, flash.destroy)
 
 
-def capture_image():
+def capture_image(root, top_frame):
     global cap
     if cap is None:
         return
     ret, frame = cap.read()
     if ret:
         cv2.imwrite("captured_image_flash.jpg", frame)
-        ocr_on_image("captured_image_flash.jpg")
+        ocr_text = ocr_on_image("captured_image_flash.jpg")
         print("Ảnh đã được chụp với hiệu ứng flash!")
+        load_edit(root, top_frame, ocr_text)
 
 
 
-def open_image():
+def open_image(root,top_frame):
     file_path = filedialog.askopenfilename(
         title="Chọn hình ảnh",
         filetypes=[("Image Files", "*.jpg;*.png;*.jpeg;*.bmp")]
     )
     if file_path:
         print("Đã chọn ảnh:", file_path)
-        show_selected_image(file_path)
+        show_selected_image(root,top_frame,file_path)
 
 
-def show_selected_image(file_path):
+def show_selected_image(root,top_frame,file_path):
     img = Image.open(file_path)
 
     # Kích thước cố định của label
@@ -229,7 +231,7 @@ def show_selected_image(file_path):
     # Nút scan
     scan_btn = tk.Button(img_window, text="🔍 Scan", font=("Arial", 12, "bold"),
                          bg="#1976D2", fg="white", padx=20, pady=10,
-                         command=lambda: ocr_on_image(file_path))
+                         command=lambda: load_edit(root, top_frame, ocr_on_image(file_path)))
     scan_btn.pack(pady=10)
 
 
@@ -263,7 +265,7 @@ def load_scan(root, top_frame):
                             bg="#4CAF50", fg="white", relief="raised", bd=3, padx=15, pady=5,
                             activebackground="#388E3C", activeforeground="white",
                             cursor="hand2", height=2,
-                            command=lambda: [flash_screen(), capture_image()])
+                            command=lambda: [flash_screen(), capture_image(root, top_frame)])
     capture_btn.pack(side=tk.LEFT, expand=True, pady=5)
 
     # Bottom Frame
@@ -276,7 +278,7 @@ def load_scan(root, top_frame):
 
     explorer_icon = tk.Label(bottom_frame, text="📂", font=("Arial", 20), bg="lightblue")
     explorer_icon.pack(side=tk.RIGHT, padx=20, pady=5)
-    explorer_icon.bind("<Button-1>", lambda event: open_image())
+    explorer_icon.bind("<Button-1>", lambda event: open_image(root,top_frame))
 
 
 
