@@ -61,9 +61,6 @@ def get_role_user_by_id(user_id):
             cursor.close()
         if (conn):
             conn.close()
-        
-        
-        
 
 
 def search_users_by_username(username_substring: str):
